@@ -314,12 +314,13 @@ def getFeature(item,feature_name):
 def get_item_volume_compare(item):
     get_item_with_shape(item)
     data=getFeature(item,'Volume')
+    file_id=str(item["FileID"])
     compare={'Type':'Volume',
     'Description':'My Volume is greater than theirs',
     'Vector':[]
     }
     query={"$and": [
-        {"FileID":item["FileID"]},
+        {"FileID":file_id},
         {"Feature.Name":"Volume"},
         {"Feature.Value":{"$gt":data}}]}
     greater_entities=get_internal('geometryFeature',**query)[0]['_items']
@@ -329,9 +330,8 @@ def get_item_volume_compare(item):
             'EntityID':entity['EntityID'],
             'Compare':-1
         })
-    
     query={"$and": [
-        {"FileID":item["FileID"]},
+        {"FileID":file_id},
         {"Feature.Name":"Volume"},
         {"Feature.Value":{"$lte":data}}]}
     smaller_entities=get_internal('geometryFeature',**query)[0]['_items']
