@@ -234,6 +234,7 @@ geom_feature_schema = {
         'type':'dict',
         'schema':{
             'Name': {'type': 'string'},
+            'Description': {'type': 'string'},
             'Value': {},
         }
     },

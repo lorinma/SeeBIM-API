@@ -32,10 +32,12 @@ class Geom:
         data = [
             {
             'Name':'TransformMatrix',
+            'Description':'Transform from global to local?',
             'Value':np.transpose(box.box_transform).tolist()
             },
             {
             'Name':'Extent',
+            'Description':'Dimension in local axis?',
             'Value':{
                 'X':ext[0],
                 'Y':ext[1],
@@ -44,6 +46,7 @@ class Geom:
             },
             {
             'Name':'OBBCentroid',
+            'Description':'Cooridnate in global?',
             'Value':{
                 'X':centroid[0],
                 'Y':centroid[1],
@@ -52,6 +55,7 @@ class Geom:
             },
             {
             'Name':'OBBAxis',
+            'Description':'axes in global?',
             'Value':{
                 'X':axis[0],
                 'Y':axis[1],
@@ -59,6 +63,21 @@ class Geom:
                 },
             },
         ]
+        greatest_value=0
+        axis='X'
+        extent=data[1]['Value']
+        obb_axis=data[3]['Value']
+        for key in extent:
+            if greatest_value<extent[key]:
+                axis=key
+                greatest_value=extent[key]
+        extruded_axis=obb_axis[axis]
+        data.append({
+            'Name':'ExtrudedAxis',
+            'Description':'the major axis with greatest dimension',
+            'Value':extruded_axis,
+            }
+        )
         return data
     
     # get other shape features
