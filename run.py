@@ -315,6 +315,7 @@ def get_item_volume_compare(item):
     get_item_with_shape(item)
     data=getFeature(item,'Volume')
     compare={'Type':'Volume',
+    'Description':'My Volume is greater than theirs',
     'Vector':[]
     }
     query={"$and": [
@@ -325,8 +326,8 @@ def get_item_volume_compare(item):
     
     for entity in greater_entities:
         compare['Vector'].append({
-            'EntityID':entity['_id'],
-            'Compare':1
+            'EntityID':entity['EntityID'],
+            'Compare':-1
         })
     
     query={"$and": [
@@ -337,8 +338,8 @@ def get_item_volume_compare(item):
     
     for entity in smaller_entities:
         compare['Vector'].append({
-            'EntityID':entity['_id'],
-            'Compare':-1
+            'EntityID':entity['EntityID'],
+            'Compare':1
         })
     item['Compare']=compare
     
