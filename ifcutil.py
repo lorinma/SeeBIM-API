@@ -80,34 +80,35 @@ class IFC:
             data[inx]["Links"]=links
             
             # add properties
-            inverse_atts=entity.get_inverse_attribute_names()
-            inverses=list()
-            if 'IsDefinedBy' in inverse_atts:
-                property_defs=entity.get_inverse('IsDefinedBy')
-                for property_def in property_defs:
-                    if 'RelatingPropertyDefinition' in property_def.get_attribute_names():
-                        p_set=property_def.get_argument('RelatingPropertyDefinition')
-                        p_set_name=p_set.get_argument('Name')
-                        p_set_desc=p_set.get_argument('Description')
-                        properties=p_set.get_argument('HasProperties')
-                        inverse=dict()
-                        inverse['Name']=p_set_name
-                        inverse['Description']=p_set_desc
-                        inverse['Properties']=list()
-                        for p in properties:
-                            p_name = p.get_argument('Name')
-                            p_desc = p.get_argument('Description')
-                            p_norm = p.get_argument('NominalValue')
-                            if 'id' in dir(p_norm):
-                                p_norm = p_norm.get_argument(0)
-                            inverse['Properties'].append({
-                                'Name':p_name,
-                                'Description':p_desc,
-                                'Value':p_norm                    
-                            })
-                        inverses.append(inverse)        
-            if len(inverses)>0:
-                data[inx]["PropertySets"]=inverses
+            if 'get_inverse_attribute_names' in dir(entity):
+                inverse_atts=entity.get_inverse_attribute_names()
+                inverses=list()
+                if 'IsDefinedBy' in inverse_atts:
+                    property_defs=entity.get_inverse('IsDefinedBy')
+                    for property_def in property_defs:
+                        if 'RelatingPropertyDefinition' in property_def.get_attribute_names():
+                            p_set=property_def.get_argument('RelatingPropertyDefinition')
+                            p_set_name=p_set.get_argument('Name')
+                            p_set_desc=p_set.get_argument('Description')
+                            properties=p_set.get_argument('HasProperties')
+                            inverse=dict()
+                            inverse['Name']=p_set_name
+                            inverse['Description']=p_set_desc
+                            inverse['Properties']=list()
+                            for p in properties:
+                                p_name = p.get_argument('Name')
+                                p_desc = p.get_argument('Description')
+                                p_norm = p.get_argument('NominalValue')
+                                if 'id' in dir(p_norm):
+                                    p_norm = p_norm.get_argument(0)
+                                inverse['Properties'].append({
+                                    'Name':p_name,
+                                    'Description':p_desc,
+                                    'Value':p_norm                    
+                                })
+                            inverses.append(inverse)        
+                if len(inverses)>0:
+                    data[inx]["PropertySets"]=inverses
         return data
     
     def parse_geometry(self,file_path,file_id):
