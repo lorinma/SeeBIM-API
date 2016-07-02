@@ -21,7 +21,7 @@ class Geom:
             self.mesh=None
             
     # get minimal volume OBB
-    def getOBB(self):
+    def getOBBFeature(self):
         if self.mesh is None:
             print("mesh is not loaded")
             return None
@@ -76,8 +76,7 @@ class Geom:
             'Name':'ExtrudedAxis',
             'Description':'the major axis with greatest dimension',
             'Value':extruded_axis,
-            }
-        )
+            })
         return data
     
     # get other shape features
@@ -85,13 +84,10 @@ class Geom:
         if self.mesh is None:
             print("mesh is not loaded")
             return None
-        centroid=self.mesh.centroid.tolist(),
-        center_mass=self.mesh.center_mass.tolist(),
-        min=self.mesh.bounds[0].tolist(),
-        max=self.mesh.bounds[1].tolist(),
         data=[
             {
             'Name':'Centroid',
+            'Description':'this is not always the same as OBB\'s',
             'Value':{
                 'X':self.mesh.centroid[0],
                 'Y':self.mesh.centroid[1],
@@ -100,6 +96,7 @@ class Geom:
             },
             {
             'Name':'CenterMass',
+            'Description':'center of mass, useful?',
             'Value':{
                 'X':self.mesh.center_mass[0],
                 'Y':self.mesh.center_mass[1],
@@ -108,6 +105,7 @@ class Geom:
             },
             {
             'Name':'Min',
+            'Description':'min point in global',
             'Value':{
                 'X':self.mesh.bounds[0][0],
                 'Y':self.mesh.bounds[0][1],
@@ -116,6 +114,7 @@ class Geom:
             },
             {
             'Name':'Max',
+            'Description':'max point in global',
             'Value':{
                 'X':self.mesh.bounds[1][0],
                 'Y':self.mesh.bounds[1][1],
@@ -124,18 +123,22 @@ class Geom:
             },
             {
             'Name':'IsConvex',
+            'Description':'convex?',
             'Value':self.mesh.is_convex,
             },
             {
             'Name':'IsWaterTight',
+            'Description':'very few cases not watertight',
             'Value':self.mesh.is_watertight,
             },
             {
             'Name':'MomentInertia',
+            'Description':'useful?',
             'Value':self.mesh.moment_inertia.tolist(),
             },
             {
             'Name':'Volume',
+            'Description':'gross volume',
             'Value':self.mesh.volume,
             }
         ]

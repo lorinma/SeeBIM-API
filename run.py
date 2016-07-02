@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
+# use default account for get trimble token
 trimble_url=os.environ.get('TRIMBLE_API_URL')
 trimble_email=os.environ.get('TRIMBLE_EMAIL')
 trimble_key=os.environ.get('TRIMBLE_KEY')
@@ -34,7 +35,9 @@ from geom import Geom
 
 from eve import Eve
 app = Eve()
-# user interaction
+
+###########################################
+# add user
 def add_user(items):
     for item in items:
         item['trimble_email']=trimble_email
@@ -44,22 +47,11 @@ def remove_dup_user(items):
         dups = get_internal('user',**{'firebase_uid': item['firebase_uid']})[0]['_items']
         if len(dups)>1:
             deleteitem_internal('user',**{'_id': item['_id']})
-def get_user_by_firebase_uid(firebase_uid):
-    return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
-def get_token_item(item):
-    para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
-    headers={"Content-Type":"application/json"}
-    r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
-    item['token']=r.json()['token']
-def get_token(items):
-    for item in items['_items']:
-        get_token_item(item)
 app.on_insert_user+=add_user
 app.on_inserted_user+=remove_dup_user
-app.on_fetched_item_trimbleToken+=get_token_item
-app.on_fetched_resource_trimbleToken+=get_token
 
-# project interaction
+###########################################
+# add project, first to trimble, then to mongo
 def add_project(items):
     token = get_trimble_token()
     for item in items:
@@ -72,11 +64,12 @@ def add_project(items):
         item['trimble_root_folder_id']=data['rootId']
         item['trimble_server_region']=data['location']
         item['trimble_root_folder_id']=data['rootId']
+app.on_insert_project+=add_project
 def get_project_by_id(_id):
     return getitem_internal('project',**{'_id': _id})[0]
-app.on_insert_project+=add_project
 
-# file interaction
+###########################################
+# add file, first to trimble, then to mongo
 def add_file_to_trimble(items):
     tool=Util()
     token = get_trimble_token()
@@ -100,6 +93,17 @@ def add_file_to_trimble(items):
         item['trimble_modifiedOn']=data['modifiedOn']
         # finally remove the file
         tool.remove_file(file_path)
+app.on_insert_file+=add_file_to_trimble
+
+# get trimble file processing status
+def get_file_status(item):
+    token=get_trimble_token()
+    headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
+    r = requests.get(trimble_url+'files/'+item['trimble_file_id']+'/status',headers=headers)
+    item['status']=r.json()['status']
+app.on_fetched_item_fileStatus+=get_file_status
+
+# add entities to mongo
 def add_file_to_mongo(items):
     file=IFC()
     for item in items:
@@ -114,11 +118,104 @@ def add_file_to_mongo(items):
         post_internal('geometry',entity_data,skip_validation=True)
         # finally remove the file
         file.util.remove_file(file_path)
-def get_file_status(item):
-    token=get_trimble_token()
-    headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
-    r = requests.get(trimble_url+'files/'+item['trimble_file_id']+'/status',headers=headers)
-    item['status']=r.json()['status']
+app.on_inserted_file+=add_file_to_mongo
+
+###########################################
+# add geometry and related features
+def add_geometry(items):
+    for item in items:
+        entity = getitem_internal('entity',**{"$and": [{"FileID":str(item["FileID"])},{"Attribute": {"$elemMatch":{"Value": str(item["GlobalId"]),"Name": "GlobalId"}}}]})[0]
+        item['EntityID']=entity["_id"]
+        # add features
+        mesh=Geom(item['Geometry'])
+        payload=list()
+        obb_features=mesh.getOBBFeature()
+        for obb_feature in obb_features:
+            payload.append({
+                'FileID':str(item['FileID']),
+                'GlobalId':str(item['GlobalId']),
+                'EntityID':str(item['EntityID']),
+                'Feature':obb_feature
+            })
+        shape_features=mesh.getMeshFeature()
+        for shape_feature in shape_features:
+            payload.append({
+                'FileID':str(item['FileID']),
+                'GlobalId':str(item['GlobalId']),
+                'EntityID':str(item['EntityID']),
+                'Feature':shape_feature
+            })
+        post_internal('geometryFeature',payload,skip_validation=True)
+app.on_insert_geometry+=add_geometry
+
+###########################################
+# entity with shape and feature
+def get_item_with_shape(item):
+    # TODO here needs to take care of pagination when they are more than 1 page
+    geoms = get_internal('geometry',**{"EntityID":item["_id"]})[0]['_items']
+    if len(geoms)>0:
+        # an product will have no more than 1 geom
+        item['Geometry']=geoms[0]['Geometry']
+    features = get_internal('geometryFeature',**{"EntityID":item["_id"]})[0]['_items']
+    if len(features)>0:
+        item['Features']=list()
+        # an product will have no more than 1 geom
+        for feature in features:
+            item['Features'].append(feature['Feature'])
+def get_source_with_shape(data):
+    items=data['_items']
+    for item in items:
+        get_item_with_property(item)  
+app.on_fetched_item_entityGeomFeature+=get_item_with_shape
+app.on_fetched_source_entityGeomFeature+=get_source_with_shape
+
+# # only return documents that have property sets, 
+# # however, ifcobject will start having properties, so potentially there're many
+# # in addition, an ifcproduct may not have property, then it is unexpectedly removed from the list
+# def pre_get_entity_geom_feature(request, lookup):
+#     lookup["PropertySets"] = {'$exists': True}
+# app.on_pre_GET_entityGeomFeature += pre_get_entity_geom_feature
+
+###########################################
+# compare volume
+def get_item_volume_compare(item):
+    volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
+    file_id=str(item["FileID"])
+    compare={'Type':'Volume',
+        'Description':'My Volume is greater than theirs',
+        'Vector':[]
+    }
+    query_greater={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"Volume"},
+        {"Feature.Value":{"$gt":volume}}]}
+    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+    for entity in greater_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'Compare':-1
+        })
+    query_smaller={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"Volume"},
+        {"Feature.Value":{"$lte":volume}}]}
+    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+    for entity in smaller_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'Compare':1
+        })
+    if len(compare['Vector'])>0:
+        item['Compare']=compare
+app.on_fetched_item_volumeCompare+=get_item_volume_compare
+
+
+
+
+
+
+
+
 def get_trimble_file(item):
     item['trimble_token']=get_trimble_token()
 def delete_file(item):
@@ -132,9 +229,7 @@ def delete_all_file():
     files = get_internal('file')[0]['_items']
     for file in files:
         delete_file(file)
-app.on_insert_file+=add_file_to_trimble
-app.on_inserted_file+=add_file_to_mongo
-app.on_fetched_item_fileStatus+=get_file_status
+
 app.on_fetched_item_fileTrimble+=get_trimble_file
 # don't want the web interface to delete too slow
 # app.on_delete_item_file+=delete_file
@@ -266,10 +361,6 @@ def get_resource_shape_with_feature(data):
     items=data['_items']
     for item in items:
         get_item_shape_with_feature(item)  
-def add_geometry(items):
-    for item in items:
-        entity = getitem_internal('entity',**{"$and": [{"FileID":str(item["FileID"])},{"Attribute": {"$elemMatch":{"Value": str(item["GlobalId"]),"Name": "GlobalId"}}}]})[0]
-        item['EntityID']=entity["_id"]
 def delete_geometry(item):
     while 1:
         features=get_internal('geometryFeature',**{'GeometryID': item["_id"]})[0]["_items"]
@@ -277,31 +368,17 @@ def delete_geometry(item):
             break
         for feature in features:
             deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
+
+
 def delete_all_geometry():
     items = get_internal('geometry')[0]['_items']
     for item in items:
         delete_geometry(item)
 app.on_fetched_item_geometryWithFeature+=get_item_shape_with_feature
 app.on_fetched_resource_geometryWithFeature+=get_resource_shape_with_feature
-app.on_insert_geometry+=add_geometry
+
 app.on_delete_item_geometry+=delete_geometry
 app.on_delete_resource_geometry+=delete_all_geometry
-
-# entity with shape and feature
-def get_item_with_shape(item):
-    shape_features = get_internal('geometryWithFeature',**{"EntityID":item["_id"]})[0]['_items']
-    features=list()
-    if len(shape_features)>0:
-        for shape_feature in shape_features:
-            for feature in shape_feature['Features']:
-                features.append(feature)
-        item['Features']=features
-def get_source_with_shape(data):
-    items=data['_items']
-    for item in items:
-        get_item_with_property(item)  
-app.on_fetched_item_entityWithFeature+=get_item_with_shape
-app.on_fetched_source_entityWithFeature+=get_source_with_shape
 
 
 def getFeature(item,feature_name):
@@ -310,44 +387,7 @@ def getFeature(item,feature_name):
         if feature['Name']==feature_name:
             return feature['Value']
     return None
-# entity with shape and feature
-def get_item_volume_compare(item):
-    get_item_with_shape(item)
-    data=getFeature(item,'Volume')
-    file_id=str(item["FileID"])
-    compare={'Type':'Volume',
-    'Description':'My Volume is greater than theirs',
-    'Vector':[]
-    }
-    query={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$gt":data}}]}
-    greater_entities=get_internal('geometryFeature',**query)[0]['_items']
     
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'Compare':-1
-        })
-    query={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$lte":data}}]}
-    smaller_entities=get_internal('geometryFeature',**query)[0]['_items']
-    
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'Compare':1
-        })
-    item['Compare']=compare
-    
-    
-    
-app.on_fetched_item_volumeCompare+=get_item_volume_compare
-
-
 # Bug: cannot fetch these extra items, even not print 
 # def get_item_feature_entity(item):
 #     print("ol1")
@@ -389,6 +429,22 @@ def get_item_query(item):
 #         get_item_query(item)  
 app.on_fetched_item_query+=get_item_query
 # app.on_fetched_source_query+=get_source_query
+
+
+def get_user_by_firebase_uid(firebase_uid):
+    return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
+def get_token_item(item):
+    para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
+    headers={"Content-Type":"application/json"}
+    r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
+    item['token']=r.json()['token']
+def get_token(items):
+    for item in items['_items']:
+        get_token_item(item)
+app.on_fetched_item_trimbleToken+=get_token_item
+app.on_fetched_resource_trimbleToken+=get_token
+
+
 
 if __name__ == '__main__':
     # app.run()

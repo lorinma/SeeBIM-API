@@ -40,19 +40,6 @@ user_resource = {
     #     'user_id',
     # ]
 }
-trimbleToken_resource={
-    'datasource': {
-        'source': 'user',
-        'projection': {
-            'trimble_email': 1,
-            'trimble_key': 1,
-        },
-    },
-    'item_title': 'TrimbleToken',
-    # 'query_objectid_as_string': True,
-    # 'allow_unknown': True,
-    'schema': user_schema
-}
 
 project_schema = {
     'name': {'type': 'string'},
@@ -150,21 +137,95 @@ file_status_resource={
         },
     },
     'item_title': 'FileStatus',
-    # 'query_objectid_as_string': True,
-    # 'allow_unknown': True,
     'schema': file_schema
 }
-file_token_resource={
-    'datasource': {
-        'source': 'file',
-        'projection':{
-            "trimble_project_id":1,
-            "trimble_file_id":1,
-            "trimble_version_id":1,
+
+entity_schema = {
+    'FileID': {
+        'type': 'objectid',
+        'data_relation': {
+            'resource': 'file',
+            'field': '_id',
+            'embeddable': True
+        },
+    },
+    'Line': {'type': 'integer'},
+    'EntityType': {'type': 'string'},
+    'Attribute': {
+        'type': 'list',
+        'schema': {
+            'type':'dict',
+            'schema':{
+                'Name': {'type': 'string'},
+                'Value': {},
+                'Editable': {'type':'boolean'}, 
+            }
         }
     },
-    'item_title': 'TrimbleFile',
-    'schema': file_schema,
+    'UserProperty': {
+        'type': 'list',
+        'schema': {
+            'type':'dict',
+            'schema':{
+                'Name': {'type': 'string'},
+                'Description': {'type':'string'},
+                'Children':{
+                    'type': 'list',
+                    'schema': {
+                        'type':'dict',
+                        'schema':{
+                            'Name': {'type': 'string'},
+                            'Description': {'type':'string'},
+                            'Value': {'type':'string'},
+                        }
+                    }
+                }
+            }
+        }
+    },
+    'Links': {
+        'type': 'list',
+        'schema': {
+            'type':'objectid',
+            'data_relation': {
+                'resource': 'entity',
+                'field': '_id',
+                'embeddable': True
+            },
+        }
+    },
+    'PropertySets': {
+        'type': 'list',
+        'schema': {
+            'type':'dict',
+            'schema':{
+                'Name': {'type': 'string'},
+                'Description': {'type':'string'},
+                'Properties':{
+                    'type': 'list',
+                    'schema': {
+                        'type':'dict',
+                        'schema':{
+                            'Name': {'type': 'string'},
+                            'Description': {'type':'string'},
+                            'Value': {'type':'string'},
+                        }
+                    }
+                }
+            }
+        }
+    },
+}
+entity_resource = {
+    # # 'title' tag used in item links. Defaults to the resource title minus
+    # # the final, plural 's' (works fine in most cases but not for 'people')
+    'item_title': 'Entity',
+    'schema': entity_schema,
+    'extra_response_fields':[
+        'Attribute',
+        'EntityType'
+    ],
+    # 'query_objectid_as_string':True,
 }
 
 geometry_schema = {
@@ -224,21 +285,6 @@ geometry_resource = {
     'item_title': 'Geometry',
     'schema': geometry_schema,
 }
-geometry_with_feature_resource={
-    'item_title': 'GeometryWithFeatur',
-    'schema': geometry_schema,
-    'datasource': {
-        'source': 'geometry',
-    },
-    'query_objectid_as_string':True,
-}
-geometry_with_entity_resource={
-    'datasource': {
-        'source': 'geometry',
-    },
-    'item_title': 'Shape',
-    'schema': geometry_schema
-}
 
 geom_feature_schema = {
     'Feature': {
@@ -266,20 +312,70 @@ geom_feature_schema = {
             'embeddable': True
         }
     },
-    'GeometryID': {
-        'type': 'geometry',
-        'data_relation': {
-            'resource': 'user',
-            'field': '_id',
-            'embeddable': True
-        }
-    },
 }
 geom_feature_resource = {
     'item_title': 'GeometryFeature',
     'schema': geom_feature_schema,
     'query_objectid_as_string':True,
 }
+
+entity_withGeometryFeature_resource={
+    'datasource': {
+        'source': 'entity',
+        # 'filter': {
+        #     "PropertySets":"{'$exists':1}"
+        # },
+    },
+    'item_title': 'EntityShapeFeature',
+    'schema': entity_schema
+}
+
+entity_volume_compare_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'Volume',
+    'schema': entity_schema
+}
+
+
+
+
+
+
+
+file_token_resource={
+    'datasource': {
+        'source': 'file',
+        'projection':{
+            "trimble_project_id":1,
+            "trimble_file_id":1,
+            "trimble_version_id":1,
+        }
+    },
+    'item_title': 'TrimbleFile',
+    'schema': file_schema,
+}
+
+geometry_with_feature_resource={
+    'item_title': 'GeometryWithFeatur',
+    'schema': geometry_schema,
+    'datasource': {
+        'source': 'geometry',
+    },
+    'query_objectid_as_string':True,
+}
+geometry_with_entity_resource={
+    'datasource': {
+        'source': 'geometry',
+    },
+    'item_title': 'Shape',
+    'schema': geometry_schema
+}
+
 geom_feature_search_resource = {
     'item_title': 'GeometryFeature',
     'schema': geom_feature_schema,
@@ -288,72 +384,7 @@ geom_feature_search_resource = {
     },
     # 'query_objectid_as_string':True,
 }
-entity_schema = {
-    'FileID': {
-        'type': 'objectid',
-        'data_relation': {
-            'resource': 'file',
-            'field': '_id',
-            'embeddable': True
-        },
-    },
-    'Line': {'type': 'integer'},
-    'EntityType': {'type': 'string'},
-    'Attribute': {
-        'type': 'list',
-        'schema': {
-            'type':'dict',
-            'schema':{
-                'Name': {'type': 'string'},
-                'Value': {},
-                'Editable': {'type':'boolean'}, 
-            }
-        }
-    },
-    'UserProperty': {
-        'type': 'list',
-        'schema': {
-            'type':'dict',
-            'schema':{
-                'Name': {'type': 'string'},
-                'Description': {'type':'string'},
-                'Children':{
-                    'type': 'list',
-                    'schema': {
-                        'type':'dict',
-                        'schema':{
-                            'Name': {'type': 'string'},
-                            'Description': {'type':'string'},
-                            'Value': {'type':'string'},
-                        }
-                    }
-                }
-            }
-        }
-    },
-    'Links': {
-        'type': 'list',
-        'schema': {
-            'type':'objectid',
-            'data_relation': {
-                'resource': 'entity',
-                'field': '_id',
-                'embeddable': True
-            },
-        }
-    },
-}
-entity_resource = {
-    # # 'title' tag used in item links. Defaults to the resource title minus
-    # # the final, plural 's' (works fine in most cases but not for 'people')
-    'item_title': 'Entity',
-    'schema': entity_schema,
-    'extra_response_fields':[
-        'Attribute',
-        'EntityType'
-    ],
-    # 'query_objectid_as_string':True,
-}
+
 entity_relProperties_resource = {
     'datasource': {
         'source': 'entity',
@@ -405,30 +436,7 @@ entity_simple_resource ={
     'item_title': 'Property',
     'schema': entity_schema,
 }
-entity_withShapeFeature_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'Attribute': 1,
-            'FileID': 1,
-            'EntityType': 1,
-        },
-    },
-    'item_title': 'Shape',
-    # 'query_objectid_as_string': True,
-    'schema': entity_schema
-}
 
-entity_volume_compare_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-        },
-    },
-    'item_title': 'Volume',
-    'schema': entity_schema
-}
 
 entity_guid_resource={
     'datasource': {
@@ -482,4 +490,20 @@ query_schema = {
 query_resource = {
     'item_title': 'Query',
     'schema': query_schema,
+}
+
+
+
+trimbleToken_resource={
+    'datasource': {
+        'source': 'user',
+        'projection': {
+            'trimble_email': 1,
+            'trimble_key': 1,
+        },
+    },
+    'item_title': 'TrimbleToken',
+    # 'query_objectid_as_string': True,
+    # 'allow_unknown': True,
+    'schema': user_schema
 }
