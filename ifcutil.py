@@ -90,23 +90,24 @@ class IFC:
                             p_set=property_def.get_argument('RelatingPropertyDefinition')
                             p_set_name=p_set.get_argument('Name')
                             p_set_desc=p_set.get_argument('Description')
-                            properties=p_set.get_argument('HasProperties')
-                            inverse=dict()
-                            inverse['Name']=p_set_name
-                            inverse['Description']=p_set_desc
-                            inverse['Properties']=list()
-                            for p in properties:
-                                p_name = p.get_argument('Name')
-                                p_desc = p.get_argument('Description')
-                                p_norm = p.get_argument('NominalValue')
-                                if 'id' in dir(p_norm):
-                                    p_norm = p_norm.get_argument(0)
-                                inverse['Properties'].append({
-                                    'Name':p_name,
-                                    'Description':p_desc,
-                                    'Value':p_norm                    
-                                })
-                            inverses.append(inverse)        
+                            if 'HasProperties' in p_set.get_attribute_names():
+                                properties=p_set.get_argument('HasProperties')
+                                inverse=dict()
+                                inverse['Name']=p_set_name
+                                inverse['Description']=p_set_desc
+                                inverse['Properties']=list()
+                                for p in properties:
+                                    p_name = p.get_argument('Name')
+                                    p_desc = p.get_argument('Description')
+                                    p_norm = p.get_argument('NominalValue')
+                                    if 'id' in dir(p_norm):
+                                        p_norm = p_norm.get_argument(0)
+                                    inverse['Properties'].append({
+                                        'Name':p_name,
+                                        'Description':p_desc,
+                                        'Value':p_norm                    
+                                    })
+                                inverses.append(inverse)        
                 if len(inverses)>0:
                     data[inx]["PropertySets"]=inverses
         return data
