@@ -180,7 +180,8 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 # compare volume
 def get_item_volume_compare(item):
     volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
-    file_id=str(item["FileID"])
+    # file_id=str(item["FileID"])
+    file_id=item["FileID"]
     compare={'Type':'Volume',
         'Description':'My Volume is greater than theirs',
         'Vector':[]
@@ -189,6 +190,7 @@ def get_item_volume_compare(item):
         {"FileID":file_id},
         {"Feature.Name":"Volume"},
         {"Feature.Value":{"$gt":volume}}]}
+    print(query_greater)
     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
     for entity in greater_entities:
         compare['Vector'].append({
