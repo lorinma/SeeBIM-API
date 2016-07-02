@@ -1,13 +1,24 @@
 # Author: Ling Ma
 # https://il.linkedin.com/in/cvlingma
 
+# this is for new firebase
+# user_schema = {
+#     'display_name': {'type': 'string'},
+#     'firebase_uid': {
+#         'type': 'string',
+#         # 'unique': True
+#     },
+#     'photo': {'type': 'string'},
+    # 'trimble_email': {'type': 'string'},
+    # 'trimble_key': {'type': 'string'},
+# }
 user_schema = {
-    'display_name': {'type': 'string'},
-    'firebase_uid': {
-        'type': 'string',
-        # 'unique': True
-    },
-    'photo': {'type': 'string'},
+    'firebase_uid': {'type':'string'},
+    'family_name': {'type':'string'},
+    'given_name': {'type':'string'},
+    'gender': {'type':'string'},
+    'name': {'type':'string'},
+    'picture': {'type':'string'},
     'trimble_email': {'type': 'string'},
     'trimble_key': {'type': 'string'},
 }

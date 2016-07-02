@@ -7,7 +7,7 @@ This service is used for querying BIM data (IFC entities) in mongoDB through a R
 sudo apt-get update; sudo apt-get install vim git -y; sudo git clone https://github.com/lorinma/dockeride.git /usr/src/dockeride; ln -sf /usr/src/dockeride/.bashrc ~/.bashrc; ln -sf /usr/src/dockeride/.vim ~/.vim; ln -sf /usr/src/dockeride/.vimrc ~/.vimrc; wget –quiet -O miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh; bash miniconda.sh -b -p $HOME/miniconda; rm -rf miniconda.sh; source ~/.bashrc;
 
 ### install eve
-pip install git+git://github.com/nicolaiarocci/eve.git
+sudo pip install git+git://github.com/nicolaiarocci/eve.git
 
 ### install ifcopenshell
 conda config --add channels http://conda.anaconda.org/DLR-SC
@@ -22,7 +22,7 @@ sudo apt-get install cmake openscad blender libspatialindex-dev libgeos-dev -y
 sudo pip install svg.path meshpy pyglet shapely Rtree
 
 ### install remaining packages
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 
 ### setup credentials in env
 touch .env
