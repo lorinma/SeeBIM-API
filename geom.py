@@ -77,6 +77,11 @@ class Geom:
             'Description':'the major axis with greatest dimension',
             'Value':extruded_axis,
             })
+        data.append({
+            'Name':'ExtrusionLength',
+            'Description':'the greatest dimension',
+            'Value':greatest_value,
+            })
         return data
     
     # get other shape features

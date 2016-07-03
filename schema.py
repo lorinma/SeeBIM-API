@@ -330,17 +330,56 @@ entity_withGeometryFeature_resource={
     'schema': entity_schema
 }
 
-entity_volume_compare_resource={
+entity_bigger_volume_resource={
     'datasource': {
         'source': 'entity',
         'projection': {
             'FileID': 1,
         },
     },
-    'item_title': 'Volume',
+    'item_title': 'volumeBigger',
     'schema': entity_schema
 }
-
+entity_parallel_extrusion_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'paraExtrusion',
+    'schema': entity_schema
+}
+entity_longger_extrusion_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'longgerExtrusion',
+    'schema': entity_schema
+}
+entity_higher_centroid_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'higherCentroid',
+    'schema': entity_schema
+}
+entity_complete_above_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'completeAbove',
+    'schema': entity_schema
+}
 
 
 

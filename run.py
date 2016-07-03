@@ -13,6 +13,8 @@ from eve.methods.patch import patch_internal
 from flask import abort
 from bson.objectid import ObjectId
 
+import numpy as np
+
 from os.path import join, dirname
 from dotenv import load_dotenv
 dotenv_path = join(dirname(__file__), '.env')
@@ -178,12 +180,12 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 # app.on_pre_GET_entityGeomFeature += pre_get_entity_geom_feature
 
 ###########################################
+# pairwise features
+
 # compare volume
-def get_item_volume_compare(item):
+def get_item_volumeBigger(item):
     volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
     # to make sure we can retrieve all the documents
-    # print(dir(app.config))
-    # print(app.config['DOMAIN']['geometryFeature'])
     app.config['DOMAIN']['geometryFeature']['pagination'] = False
     # file_id=str(item["FileID"])
     file_id=item["FileID"]
@@ -194,7 +196,7 @@ def get_item_volume_compare(item):
     query_greater={"$and": [
         {"FileID":file_id},
         {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$gt":volume}}]}
+        {"Feature.Value":{"$gt":volume}},{"EntityID":{'$ne':item["_id"]}}]}
     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
     for entity in greater_entities:
         compare['Vector'].append({
@@ -205,7 +207,75 @@ def get_item_volume_compare(item):
     query_smaller={"$and": [
         {"FileID":file_id},
         {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$lte":volume}}]}
+        {"Feature.Value":{"$lte":volume}},{"EntityID":{'$ne':item["_id"]}}]}
+    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+    for entity in smaller_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':1
+        })
+    if len(compare['Vector'])>0:
+        item['Compare']=compare
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+app.on_fetched_item_volumeBigger+=get_item_volumeBigger
+
+# parallel extrusion
+def get_item_parallel_extrusion(item):
+    my_axis = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]['Feature']['Value']
+    
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    extrusions = get_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+    compare=list()
+    for extrusion in extrusions:
+        axis=extrusion['Feature']['Value']
+        dot=np.dot(my_axis,axis)
+        if np.isclose(abs(dot),1):
+            compare.append({
+                'EntityID':extrusion['EntityID'],
+                'GlobalId':extrusion['GlobalId'],
+                'Compare':1
+            })
+        else:
+            compare.append({
+                'EntityID':extrusion['EntityID'],
+                'GlobalId':extrusion['GlobalId'],
+                'Compare':-1
+            })
+    item['Compare']={
+        'Type':'Parallel',
+        'Description':'we are in parallel',
+        'Vector':compare
+    }
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+app.on_fetched_item_paraExtrusion+=get_item_parallel_extrusion
+
+# longger extrusion
+def get_item_longgerExtrusion(item):
+    extrusion = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrusionLength","EntityID":item["_id"]})[0]['Feature']['Value']
+    # to make sure we can retrieve all the documents
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    # file_id=str(item["FileID"])
+    file_id=item["FileID"]
+    compare={'Type':'Volume',
+        'Description':'I\'m longger than them',
+        'Vector':[]
+    }
+    query_greater={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value":{"$gt":extrusion}}]}
+    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+    for entity in greater_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':-1
+        })
+    query_smaller={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value":{"$lte":extrusion}}]}
     smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
     for entity in smaller_entities:
         compare['Vector'].append({
@@ -217,7 +287,83 @@ def get_item_volume_compare(item):
         item['Compare']=compare
     print(len(compare['Vector']))
     app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_volumeCompare+=get_item_volume_compare
+app.on_fetched_item_longgerExtrusion+=get_item_longgerExtrusion
+
+# higher centroid
+def get_item_higherCentroid(item):
+    level = getitem_internal('geometryFeature',**{"Feature.Name":"OBBCentroid","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+    # to make sure we can retrieve all the documents
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    # file_id=str(item["FileID"])
+    file_id=item["FileID"]
+    compare={'Type':'Volume',
+        'Description':'I\'m higher than them',
+        'Vector':[]
+    }
+    query_greater={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value.Z":{"$gt":level}}]}
+    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+    for entity in greater_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':-1
+        })
+    query_smaller={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value.Z":{"$lte":level}}]}
+    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+    for entity in smaller_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':1
+        })
+    if len(compare['Vector'])>0:
+        item['Compare']=compare
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+app.on_fetched_item_higherCentroid+=get_item_higherCentroid
+
+# complete above
+def get_item_completeAbove(item):
+    lowest_level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+    # to make sure we can retrieve all the documents
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    # file_id=str(item["FileID"])
+    file_id=item["FileID"]
+    compare={'Type':'Volume',
+        'Description':'I\'m higher than them',
+        'Vector':[]
+    }
+    query_greater={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"Max"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value.Z":{"$gt":lowest_level}}]}
+    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+    for entity in greater_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':-1
+        })
+    query_smaller={"$and": [
+        {"FileID":file_id},
+        {"Feature.Name":"Max"},{"EntityID":{'$ne':item["_id"]}},
+        {"Feature.Value.Z":{"$lte":lowest_level}}]}
+    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+    for entity in smaller_entities:
+        compare['Vector'].append({
+            'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
+            'Compare':1
+        })
+    if len(compare['Vector'])>0:
+        item['Compare']=compare
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+app.on_fetched_item_completeAbove+=get_item_completeAbove
 
 
 

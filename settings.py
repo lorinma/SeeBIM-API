@@ -44,7 +44,11 @@ DOMAIN= {
     'geometry': schema.geometry_resource,
     'geometryFeature': schema.geom_feature_resource,
     'entityGeomFeature': schema.entity_withGeometryFeature_resource,
-    'volumeCompare':schema.entity_volume_compare_resource,
+    'volumeBigger':schema.entity_bigger_volume_resource,
+    'paraExtrusion':schema.entity_parallel_extrusion_resource,
+    'longgerExtrusion':schema.entity_longger_extrusion_resource,
+    'higherCentroid':schema.entity_higher_centroid_resource,
+    'completeAbove':schema.entity_complete_above_resource,
     
     
     
