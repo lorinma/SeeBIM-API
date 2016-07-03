@@ -221,6 +221,7 @@ def get_item_volumeBigger(item):
 app.on_fetched_item_volumeBigger+=get_item_volumeBigger
 
 # parallel extrusion
+threshhold_degree=5
 def get_item_parallel_extrusion(item):
     my_axis = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]['Feature']['Value']
     
@@ -229,8 +230,12 @@ def get_item_parallel_extrusion(item):
     compare=list()
     for extrusion in extrusions:
         axis=extrusion['Feature']['Value']
-        dot=np.dot(my_axis,axis)
-        if np.isclose(abs(dot),1):
+        # the angle in degree
+        import math
+        absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,axis))))
+        print(absolute_angle)
+        # if the angle is lowere than 5
+        if absolute_angle<threshhold_degree:
             compare.append({
                 'EntityID':extrusion['EntityID'],
                 'GlobalId':extrusion['GlobalId'],
@@ -367,7 +372,23 @@ app.on_fetched_item_completeAbove+=get_item_completeAbove
 
 
 
+###########################################
+# deletion
 
+# delete entity 
+# def delete_entity(item):
+#     while 1:
+#         geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
+#         if len(geometries)<1:
+#             break
+#         for geometry in geometries:
+#             deleteitem_internal('geometry',**{"_id":geometry['_id']})
+# def delete_all_entity():
+#     items = get_internal('entity')[0]['_items']
+#     for item in items:
+#         delete_entity(item)
+# app.on_delete_item_entity+=delete_entity
+# app.on_delete_resource_entity+=delete_all_entity
 
 
 # below are old staff
@@ -392,20 +413,6 @@ app.on_fetched_item_fileTrimble+=get_trimble_file
 # app.on_delete_item_file+=delete_file
 app.on_delete_resource_file+=delete_all_file
 
-# operate on entity 
-def delete_entity(item):
-    while 1:
-        geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
-        if len(geometries)<1:
-            break
-        for geometry in geometries:
-            deleteitem_internal('geometry',**{"_id":geometry['_id']})
-def delete_all_entity():
-    items = get_internal('entity')[0]['_items']
-    for item in items:
-        delete_entity(item)
-app.on_delete_item_entity+=delete_entity
-app.on_delete_resource_entity+=delete_all_entity
 
 # interaction with entity attributes
 def get_attribute_value(attributes,attribute_name):

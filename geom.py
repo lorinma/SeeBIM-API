@@ -29,6 +29,8 @@ class Geom:
         ext = box.extents.tolist()
         centroid = box.centroid.tolist()
         axis=np.transpose(np.array(box.box_transform)[0:3,0:3]).tolist()
+        # update the ext in local
+        ext = np.absolute(np.dot(axis,ext))
         data = [
             {
             'Name':'TransformMatrix',
