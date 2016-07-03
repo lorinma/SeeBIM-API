@@ -35,6 +35,7 @@ from geom import Geom
 
 from eve import Eve
 app = Eve()
+# app = Eve(settings='settings.py')
 
 ###########################################
 # add user
@@ -180,6 +181,10 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 # compare volume
 def get_item_volume_compare(item):
     volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
+    # to make sure we can retrieve all the documents
+    # print(dir(app.config))
+    # print(app.config['DOMAIN']['geometryFeature'])
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
     # file_id=str(item["FileID"])
     file_id=item["FileID"]
     compare={'Type':'Volume',
@@ -190,11 +195,11 @@ def get_item_volume_compare(item):
         {"FileID":file_id},
         {"Feature.Name":"Volume"},
         {"Feature.Value":{"$gt":volume}}]}
-    print(query_greater)
     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
     for entity in greater_entities:
         compare['Vector'].append({
             'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
             'Compare':-1
         })
     query_smaller={"$and": [
@@ -205,10 +210,13 @@ def get_item_volume_compare(item):
     for entity in smaller_entities:
         compare['Vector'].append({
             'EntityID':entity['EntityID'],
+            'GlobalId':entity['GlobalId'],
             'Compare':1
         })
     if len(compare['Vector'])>0:
         item['Compare']=compare
+    print(len(compare['Vector']))
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
 app.on_fetched_item_volumeCompare+=get_item_volume_compare
 
 
@@ -216,7 +224,8 @@ app.on_fetched_item_volumeCompare+=get_item_volume_compare
 
 
 
-
+# below are old staff
+###########################################
 
 def get_trimble_file(item):
     item['trimble_token']=get_trimble_token()

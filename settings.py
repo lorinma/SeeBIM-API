@@ -31,6 +31,9 @@ ITEM_METHODS= ['GET', 'PATCH', 'PUT', 'DELETE']
 EMBEDDING= True
 X_DOMAINS= '*'
 X_HEADERS=['Content-Type','IF-Match']
+
+# default 25
+# PAGINATION_DEFAULT=500
                
 DOMAIN= {
     'user': schema.user_resource,
@@ -45,6 +48,8 @@ DOMAIN= {
     
     
     
+# below are old staff
+###########################################
     'fileTrimble':schema.file_token_resource,
     'entityPropertySet': schema.entity_property_set_resource,
     'entityRelProperties':schema.entity_relProperties_resource,
