@@ -131,8 +131,9 @@ class IFC:
             shape = ifcopenshell.geom.create_shape(settings, entity_element)
             geometry = shape.geometry
             v=geometry.verts
-            # convert from mm to m
-            v_array=np.divide(np.array(v).reshape(int(len(v)/3),3),1000.)
+            # default unit: mm, round decimal 2 places
+            # v_array=np.divide(np.array(v).reshape(int(len(v)/3),3),1000.)
+            v_array=np.array(v).reshape(int(len(v)/3),3)
             f=geometry.faces
             f_array=np.array(f).reshape(int(len(f)/3),3)
             n=geometry.normals
@@ -140,7 +141,7 @@ class IFC:
             element["Vertices"]=v_array.tolist()
             element["Faces"]=f_array.tolist()
             element["Normals"]=n_array.tolist()
-            element["Unit"]="m"
+            element["Unit"]="mm"
             data.append({
                 "Geometry":element,
                 "FileID":file_id,

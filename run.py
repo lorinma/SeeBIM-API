@@ -241,7 +241,6 @@ def get_item_parallel_extrusion(item):
         # the angle in degree
         import math
         absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,axis))))
-        print(absolute_angle)
         # if the angle is lowere than 5
         if absolute_angle<threshhold_degree:
             compare.append({
@@ -345,36 +344,27 @@ def get_item_completeAbove(item):
     lowest_level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
     # to make sure we can retrieve all the documents
     app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # file_id=str(item["FileID"])
-    file_id=item["FileID"]
-    compare={'Type':'Volume',
-        'Description':'I\'m higher than them',
-        'Vector':[]
+    features = get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+    compare=list()
+    for feature in features:
+        max_level=feature['Feature']['Value']['Z']
+        if lowest_level>max_level or np.isclose(lowest_level,max_level,atol=1e-1):
+            compare.append({
+                'EntityID':feature['EntityID'],
+                'GlobalId':feature['GlobalId'],
+                'Compare':1
+            })
+        else:
+            compare.append({
+                'EntityID':feature['EntityID'],
+                'GlobalId':feature['GlobalId'],
+                'Compare':-1
+            })
+    item['Compare']={
+        'Type':'Completely above',
+        'Description':'I\'m completely above them',
+        'Vector':compare
     }
-    query_greater={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Max"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$gt":lowest_level}}]}
-    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':-1
-        })
-    query_smaller={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Max"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$lte":lowest_level}}]}
-    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':1
-        })
-    if len(compare['Vector'])>0:
-        item['Compare']=compare
     app.config['DOMAIN']['geometryFeature']['pagination'] = True
 app.on_fetched_item_completeAbove+=get_item_completeAbove
 
@@ -382,6 +372,7 @@ app.on_fetched_item_completeAbove+=get_item_completeAbove
 def get_item_connect(item):
     my_geometry = getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['Geometry']
     my_mesh=Geom(my_geometry).mesh
+    my_bound=my_mesh.bounds.reshape(1,6)[0]
     my_tree=my_mesh.triangles_tree()
     
     app.config['DOMAIN']['geometry']['pagination'] = False
@@ -390,34 +381,26 @@ def get_item_connect(item):
     for geometry in geometries:
         mesh=Geom(geometry['Geometry']).mesh
         bound=mesh.bounds.reshape(1,6)[0]
+        # bound=mesh.bounds
+        # bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
         potential_triangle_indices=list(my_tree.intersection(bound))
-        if len(potential_triangle_indices)==0:
+        if len(potential_triangle_indices)>0:
+            my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
+            checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
+            print(checking_results)
+            if True in checking_results:
+                compare.append({
+                    'EntityID':geometry['EntityID'],
+                    'GlobalId':geometry['GlobalId'],
+                    'Compare':1
+                })
+                continue
+        else:
             compare.append({
                 'EntityID':geometry['EntityID'],
                 'GlobalId':geometry['GlobalId'],
                 'Compare':-1
             })
-            # continue
-        else:
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':1
-            })
-        # my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
-        # checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
-        # if True in checking_results:
-        #     compare.append({
-        #         'EntityID':geometry['EntityID'],
-        #         'GlobalId':geometry['GlobalId'],
-        #         'Compare':1
-        #     })    
-        # else:
-        #     compare.append({
-        #         'EntityID':geometry['EntityID'],
-        #         'GlobalId':geometry['GlobalId'],
-        #         'Compare':-1
-        #     })
     item['Compare']={
         'Type':'Connect',
         'Description':'either touching or collision',
@@ -426,18 +409,22 @@ def get_item_connect(item):
     app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_connect+=get_item_connect
 
-
+# below are old staff
 ###########################################
-# deletion
 
-# delete entity 
+# ###########################################
+# # deletion, this is not a good idea
+
+# # delete entity 
 # def delete_entity(item):
-#     while 1:
-#         geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
-#         if len(geometries)<1:
-#             break
-#         for geometry in geometries:
-#             deleteitem_internal('geometry',**{"_id":geometry['_id']})
+#     geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
+#     for geometry in geometries:
+#         deleteitem_internal('geometry',**{"_id":geometry['_id']})
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     features=get_internal('geometryFeature',**{'EntityID': item["_id"]})[0]["_items"]
+#     for feature in features:
+#         deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
 # def delete_all_entity():
 #     items = get_internal('entity')[0]['_items']
 #     for item in items:
@@ -445,26 +432,22 @@ app.on_fetched_item_connect+=get_item_connect
 # app.on_delete_item_entity+=delete_entity
 # app.on_delete_resource_entity+=delete_all_entity
 
-
-# below are old staff
-###########################################
-
-def delete_file(item):
-    while 1:
-        entities=get_internal('entity',**{'FileID': item["_id"]})[0]["_items"]
-        if len(entities)<1:
-            break
-        for entity in entities:
-            deleteitem_internal('entity',**{"_id":entity['_id']})
-def delete_all_file():
-    files = get_internal('file')[0]['_items']
-    for file in files:
-        delete_file(file)
-
-# don't want the web interface to delete too slow
+# # delete file 
+# def delete_file(item):
+#     app.config['DOMAIN']['entity']['pagination'] = False
+#     entities=get_internal('entity',**{'FileID': item["_id"]})[0]["_items"]
+#     for entity in entities:
+#         deleteitem_internal('entity',**{"_id":entity['_id']})
+#     app.config['DOMAIN']['entity']['pagination'] = True
+# def delete_all_file():
+#     app.config['DOMAIN']['entity']['pagination'] = False
+#     entities=get_internal('entity')[0]["_items"]
+#     for entity in entities:
+#         deleteitem_internal('entity',**{"_id":entity['_id']})
+#     app.config['DOMAIN']['entity']['pagination'] = True
+# # don't want the web interface to delete too slow
 # app.on_delete_item_file+=delete_file
-app.on_delete_resource_file+=delete_all_file
-
+# app.on_delete_resource_file+=delete_all_file
 
 # interaction with entity attributes
 def get_attribute_value(attributes,attribute_name):

@@ -139,6 +139,18 @@ file_status_resource={
     'item_title': 'FileStatus',
     'schema': file_schema
 }
+file_token_resource={
+    'datasource': {
+        'source': 'file',
+        'projection':{
+            "trimble_project_id":1,
+            "trimble_file_id":1,
+            "trimble_version_id":1,
+        }
+    },
+    'item_title': 'TrimbleFile',
+    'schema': file_schema,
+}
 
 entity_schema = {
     'FileID': {
@@ -405,18 +417,6 @@ entity_connect_resource={
 # below are old staff
 ###########################################
 
-file_token_resource={
-    'datasource': {
-        'source': 'file',
-        'projection':{
-            "trimble_project_id":1,
-            "trimble_file_id":1,
-            "trimble_version_id":1,
-        }
-    },
-    'item_title': 'TrimbleFile',
-    'schema': file_schema,
-}
 
 geometry_with_feature_resource={
     'item_title': 'GeometryWithFeatur',
