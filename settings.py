@@ -49,7 +49,7 @@ DOMAIN= {
     'longgerExtrusion':schema.entity_longger_extrusion_resource,
     'higherCentroid':schema.entity_higher_centroid_resource,
     'completeAbove':schema.entity_complete_above_resource,
-    
+    'connect':schema.entity_connect_resource,
     
     
 # below are old staff

@@ -34,6 +34,7 @@ from ifcutil import IFC
 from utils import Util
 
 from geom import Geom
+import trimesh
 
 from eve import Eve
 app = Eve()
@@ -370,6 +371,43 @@ def get_item_completeAbove(item):
     app.config['DOMAIN']['geometryFeature']['pagination'] = True
 app.on_fetched_item_completeAbove+=get_item_completeAbove
 
+# touching or collision
+def get_item_connect(item):
+    my_geometry = getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['Geometry']
+    my_mesh=Geom(my_geometry).mesh
+    my_tree=my_mesh.triangles_tree()
+    
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+    print(len(geometries))
+    compare=list()
+    for geometry in geometries:
+        mesh=Geom(geometry['Geometry']).mesh
+        bound=mesh.bounds.reshape(1,6)[0]
+        potential_triangle_indices=list(my_tree.intersection(bound))
+        if len(potential_triangle_indices)==0:
+            continue
+        my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
+        checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
+        if True in checking_results:
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':1
+            })    
+        else:
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':-1
+            })
+    item['Compare']={
+        'Type':'Connect',
+        'Description':'either touching or collision',
+        'Vector':compare
+    }
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+app.on_fetched_item_connect+=get_item_connect
 
 
 ###########################################

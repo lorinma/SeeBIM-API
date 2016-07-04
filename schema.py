@@ -380,6 +380,17 @@ entity_complete_above_resource={
     'item_title': 'completeAbove',
     'schema': entity_schema
 }
+# either touching or collision
+entity_connect_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+        },
+    },
+    'item_title': 'connect',
+    'schema': entity_schema
+}
 
 
 
