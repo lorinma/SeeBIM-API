@@ -40,6 +40,7 @@ DOMAIN= {
     'project': schema.project_resource,
     'file': schema.file_resource,
     'fileStatus':schema.file_status_resource,
+    'fileTrimble':schema.file_token_resource,
     'entity': schema.entity_resource,
     'geometry': schema.geometry_resource,
     'geometryFeature': schema.geom_feature_resource,
@@ -54,7 +55,6 @@ DOMAIN= {
     
 # below are old staff
 ###########################################
-    'fileTrimble':schema.file_token_resource,
     'entityPropertySet': schema.entity_property_set_resource,
     'entityRelProperties':schema.entity_relProperties_resource,
     

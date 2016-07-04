@@ -125,6 +125,13 @@ def add_file_to_mongo(items):
 app.on_inserted_file+=add_file_to_mongo
 
 ###########################################
+# get file with trimble token, file model viewer requires token
+def get_trimble_file(item):
+    item['trimble_token']=get_trimble_token()
+    print(item['trimble_token'])
+app.on_fetched_item_fileTrimble+=get_trimble_file
+
+###########################################
 # add geometry and related features
 def add_geometry(items):
     for item in items:
@@ -385,26 +392,32 @@ def get_item_connect(item):
         bound=mesh.bounds.reshape(1,6)[0]
         potential_triangle_indices=list(my_tree.intersection(bound))
         if len(potential_triangle_indices)==0:
-            # compare.append({
-            #     'EntityID':geometry['EntityID'],
-            #     'GlobalId':geometry['GlobalId'],
-            #     'Compare':-1
-            # })
-            continue
-        my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
-        checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
-        if True in checking_results:
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':1
-            })    
-        else:
             compare.append({
                 'EntityID':geometry['EntityID'],
                 'GlobalId':geometry['GlobalId'],
                 'Compare':-1
             })
+            # continue
+        else:
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':1
+            })
+        # my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
+        # checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
+        # if True in checking_results:
+        #     compare.append({
+        #         'EntityID':geometry['EntityID'],
+        #         'GlobalId':geometry['GlobalId'],
+        #         'Compare':1
+        #     })    
+        # else:
+        #     compare.append({
+        #         'EntityID':geometry['EntityID'],
+        #         'GlobalId':geometry['GlobalId'],
+        #         'Compare':-1
+        #     })
     item['Compare']={
         'Type':'Connect',
         'Description':'either touching or collision',
@@ -436,8 +449,6 @@ app.on_fetched_item_connect+=get_item_connect
 # below are old staff
 ###########################################
 
-def get_trimble_file(item):
-    item['trimble_token']=get_trimble_token()
 def delete_file(item):
     while 1:
         entities=get_internal('entity',**{'FileID': item["_id"]})[0]["_items"]
@@ -450,7 +461,6 @@ def delete_all_file():
     for file in files:
         delete_file(file)
 
-app.on_fetched_item_fileTrimble+=get_trimble_file
 # don't want the web interface to delete too slow
 # app.on_delete_item_file+=delete_file
 app.on_delete_resource_file+=delete_all_file
