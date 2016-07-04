@@ -28,5 +28,5 @@ Shapely==1.5.16
 simplejson==3.8.2
 six==1.10.0
 svg.path==2.1.1
-trimesh==1.14.7
+trimesh
 Werkzeug==0.11.3
