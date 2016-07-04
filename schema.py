@@ -335,6 +335,7 @@ entity_bigger_volume_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'volumeBigger',
@@ -345,6 +346,7 @@ entity_parallel_extrusion_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'paraExtrusion',
@@ -355,6 +357,7 @@ entity_longger_extrusion_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'longgerExtrusion',
@@ -365,6 +368,7 @@ entity_higher_centroid_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'higherCentroid',
@@ -375,6 +379,7 @@ entity_complete_above_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'completeAbove',
@@ -386,6 +391,7 @@ entity_connect_resource={
         'source': 'entity',
         'projection': {
             'FileID': 1,
+            'GlobalId': 1,
         },
     },
     'item_title': 'connect',

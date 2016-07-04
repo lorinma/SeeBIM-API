@@ -377,15 +377,19 @@ def get_item_connect(item):
     my_mesh=Geom(my_geometry).mesh
     my_tree=my_mesh.triangles_tree()
     
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    app.config['DOMAIN']['geometry']['pagination'] = False
     geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    print(len(geometries))
     compare=list()
     for geometry in geometries:
         mesh=Geom(geometry['Geometry']).mesh
         bound=mesh.bounds.reshape(1,6)[0]
         potential_triangle_indices=list(my_tree.intersection(bound))
         if len(potential_triangle_indices)==0:
+            # compare.append({
+            #     'EntityID':geometry['EntityID'],
+            #     'GlobalId':geometry['GlobalId'],
+            #     'Compare':-1
+            # })
             continue
         my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
         checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
@@ -406,7 +410,7 @@ def get_item_connect(item):
         'Description':'either touching or collision',
         'Vector':compare
     }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+    app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_connect+=get_item_connect
 
 
