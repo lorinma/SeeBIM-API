@@ -342,7 +342,9 @@ entity_withGeometryFeature_resource={
     'schema': entity_schema
 }
 
-entity_bigger_volume_resource={
+
+# either touching or collision
+entity_connect_resource={
     'datasource': {
         'source': 'entity',
         'projection': {
@@ -350,7 +352,7 @@ entity_bigger_volume_resource={
             'GlobalId': 1,
         },
     },
-    'item_title': 'volumeBigger',
+    'item_title': 'connect',
     'schema': entity_schema
 }
 entity_parallel_extrusion_resource={
@@ -364,6 +366,28 @@ entity_parallel_extrusion_resource={
     'item_title': 'paraExtrusion',
     'schema': entity_schema
 }
+entity_higher_centroid_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'higherCentroid',
+    'schema': entity_schema
+}
+entity_lower_bottom_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'lowerBottom',
+    'schema': entity_schema
+}
 entity_longger_extrusion_resource={
     'datasource': {
         'source': 'entity',
@@ -375,7 +399,7 @@ entity_longger_extrusion_resource={
     'item_title': 'longgerExtrusion',
     'schema': entity_schema
 }
-entity_higher_centroid_resource={
+entity_parallel_bridge_resource={
     'datasource': {
         'source': 'entity',
         'projection': {
@@ -383,7 +407,18 @@ entity_higher_centroid_resource={
             'GlobalId': 1,
         },
     },
-    'item_title': 'higherCentroid',
+    'item_title': 'parallelBridge',
+    'schema': entity_schema
+}
+entity_bigger_volume_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'volumeBigger',
     'schema': entity_schema
 }
 entity_complete_above_resource={
@@ -397,8 +432,7 @@ entity_complete_above_resource={
     'item_title': 'completeAbove',
     'schema': entity_schema
 }
-# either touching or collision
-entity_connect_resource={
+entity_closer_transverse_resource={
     'datasource': {
         'source': 'entity',
         'projection': {
@@ -406,17 +440,55 @@ entity_connect_resource={
             'GlobalId': 1,
         },
     },
-    'item_title': 'connect',
+    'item_title': 'closerTansverse',
     'schema': entity_schema
 }
-
-
-
-
-
+entity_closer_longitudinal_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'closerLongi',
+    'schema': entity_schema
+}
+entity_parallel_bridge_transverse_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'parallelBridgeTransverse',
+    'schema': entity_schema
+}
+entity_vertical_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'Vertical',
+    'schema': entity_schema
+}
+entity_overlap_z_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'overlapZ',
+    'schema': entity_schema
+}
 # below are old staff
 ###########################################
-
 
 geometry_with_feature_resource={
     'item_title': 'GeometryWithFeatur',

@@ -45,12 +45,20 @@ DOMAIN= {
     'geometry': schema.geometry_resource,
     'geometryFeature': schema.geom_feature_resource,
     'entityGeomFeature': schema.entity_withGeometryFeature_resource,
-    'volumeBigger':schema.entity_bigger_volume_resource,
-    'paraExtrusion':schema.entity_parallel_extrusion_resource,
-    'longgerExtrusion':schema.entity_longger_extrusion_resource,
-    'higherCentroid':schema.entity_higher_centroid_resource,
-    'completeAbove':schema.entity_complete_above_resource,
+    
     'connect':schema.entity_connect_resource,
+    'paraExtrusion':schema.entity_parallel_extrusion_resource,
+    'higherCentroid':schema.entity_higher_centroid_resource,
+    'lowerBottom':schema.entity_lower_bottom_resource,
+    'longgerExtrusion':schema.entity_longger_extrusion_resource,
+    'parallelBridge':schema.entity_parallel_bridge_resource,
+    'volumeBigger':schema.entity_bigger_volume_resource,
+    'completeAbove':schema.entity_complete_above_resource,
+    'closerTran':schema.entity_closer_transverse_resource,
+    'closerLongi':schema.entity_closer_longitudinal_resource,
+    'paraBriTrans':schema.entity_parallel_bridge_transverse_resource,
+    'Vertical':schema.entity_vertical_resource,
+    'overlapZ':schema.entity_overlap_z_resource,
     
     
 # below are old staff
