@@ -342,7 +342,6 @@ entity_withGeometryFeature_resource={
     'schema': entity_schema
 }
 
-
 # either touching or collision
 entity_connect_resource={
     'datasource': {
@@ -487,6 +486,20 @@ entity_overlap_z_resource={
     'item_title': 'overlapZ',
     'schema': entity_schema
 }
+
+# get all the elements' features of a model
+file_model_shape_feature_resource={
+    'datasource': {
+        'source': 'file',
+        'projection': {
+            'name': 1,
+        },
+    },
+    'item_title': 'modelShape',
+    'schema': file_schema
+}
+
+
 # below are old staff
 ###########################################
 

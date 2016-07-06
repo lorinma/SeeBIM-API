@@ -128,7 +128,6 @@ app.on_inserted_file+=add_file_to_mongo
 # get file with trimble token, file model viewer requires token
 def get_trimble_file(item):
     item['trimble_token']=get_trimble_token()
-    print(item['trimble_token'])
 app.on_fetched_item_fileTrimble+=get_trimble_file
 
 ###########################################
@@ -209,7 +208,6 @@ def get_item_connect(item):
         if len(potential_triangle_indices)>0:
             my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
             checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
-            print(checking_results)
             if True in checking_results:
                 compare.append({
                     'EntityID':geometry['EntityID'],
@@ -376,7 +374,6 @@ def get_item_longgerExtrusion(item):
         })
     if len(compare['Vector'])>0:
         item['Compare']=compare
-    print(len(compare['Vector']))
     app.config['DOMAIN']['geometryFeature']['pagination'] = True
 app.on_fetched_item_longgerExtrusion+=get_item_longgerExtrusion
 
@@ -568,8 +565,6 @@ def get_item_closerLongitudinalCoordinate(item):
     my_t_c=my_centroid[bridge_longitudinal_axis]
     bridge_centroid=bridgeCentroid(item['FileID'])
     b_t_c=bridge_centroid[bridge_longitudinal_axis]
-    print(my_centroid)
-    print(bridge_centroid)
     # to make sure we can retrieve all the documents
     app.config['DOMAIN']['geometryFeature']['pagination'] = False
     features = get_internal('geometryFeature',**{"Feature.Name":"Centroid","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
@@ -636,7 +631,7 @@ def get_item_Vertical(item):
         compare=-1
     item['Compare']={
         'Type':'Parallel',
-        'Description':'we are in parallel',
+        'Description':'I\'m vertical',
         'Vector':[{
             'EntityID':item['_id'],
             'GlobalId':my_feature['GlobalId'],
@@ -649,54 +644,58 @@ app.on_fetched_item_Vertical+=get_item_Vertical
 def get_item_overlapZ(item):
     my_min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
     my_max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    # print(my_min)
-    # print(my_max)
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # t=get_internal('geometryFeature',**{"$or": [{"$and":[{"Feature.Name":"Max"},{"Feature.Value.Z":{"$gt":4750}}]},{"$and":[{"Feature.Name":"Min"},{"Feature.Value.Z":{"$lt":5603}}]}],"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    t = get_internal('geometryFeature',**{"Feature.Name":"Min","Feature.Value.Z":{"$lt":my_max},"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    
-    print(t)
-    # get_internal('geometryFeature',**{"Feature.Name":"Min","Feature.Value.Z":{"$lt":my_max},"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    # min_features = get_internal('geometryFeature',**{"Feature.Name":"Min","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    # print(min_features)
-    # max_features = get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    # features=list()
-    # compare=list()
-    # for min_feature in min_features:
-    #     EntityID=min_feature['EntityID']
-    #     Feature={
-    #         'Min':min_feature['Feature']['Value']['Z']
-    #     }
-    #     for max_feature in max_features:
-    #         if max_feature['EntityID']==EntityID:
-    #             Feature['Max']=max_feature['Feature']['Value']['Z']
-    #             max_features.remove(max_feature)
-    #             break
-    #     features.append({
-    #         'EntityID':EntityID,
-    #         'Feature':Feature
-    #     })
-    # for feature in features:
-    #     if my_min<feature['Max'] and my_max>feature['Min']:
-    #         compare.append({
-    #             'EntityID':feature['EntityID'],
-    #             'GlobalId':feature['GlobalId'],
-    #             'Compare':1
-    #         })
-    #     else:
-    #         compare.append({
-    #             'EntityID':feature['EntityID'],
-    #             'GlobalId':feature['GlobalId'],
-    #             'Compare':-1
-    #         })
-    # item['Compare']={
-    #     'Type':'Completely above',
-    #     'Description':'I\'m completely above them',
-    #     'Vector':compare
-    # }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    geometries = get_internal('geometry',**{"FileID":item["FileID"]})[0]['_items']
+    compare=list()
+    for geometry in geometries:
+        min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
+        max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
+        if my_min<max and my_max>min:
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':1
+            })
+        else:
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':-1
+            })
+    item['Compare']={
+        'Type':'Completely above',
+        'Description':'I overlap with them in z',
+        'Vector':compare
+    }
+    app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_overlapZ+=get_item_overlapZ
 
+
+###########################################
+# model's features
+
+# shape feature of all the elements
+def get_item_modelShapeFeatures(item):
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    geometries = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+    data=list()
+    for geometry in geometries:
+        data.append({
+            'EntityID':geometry['EntityID'],
+            'Features':{
+                'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
+                'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
+                'Vertical':getitem_internal('Vertical',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
+            },
+            'GlobalId':geometry['GlobalId'],
+        })
+    item['FeatureVector']=data
+    app.config['DOMAIN']['geometry']['pagination'] = True
+app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
+
+
+
+###########################################
 # below are old staff
 ###########################################
 
@@ -794,7 +793,6 @@ app.on_fetched_resource_entityRelProperties+=get_rel_property_set
 # entity with property set interaction
 # you can only query specific entity item
 def get_item_with_property(item):
-    print(item['_id'])
     rels = get_internal('entityRelProperties',**{"Attribute": {"$elemMatch":{"Value": str(item['_id']),"Name": "RelatedObjects"}}})[0]['_items']
     if len(rels)>0:
         item['PropertyDefinition']=rels

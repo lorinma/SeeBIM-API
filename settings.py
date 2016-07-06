@@ -60,7 +60,11 @@ DOMAIN= {
     'Vertical':schema.entity_vertical_resource,
     'overlapZ':schema.entity_overlap_z_resource,
     
-    
+    'modelShapeFeature':schema.file_model_shape_feature_resource,
+
+
+
+###########################################    
 # below are old staff
 ###########################################
     'entityPropertySet': schema.entity_property_set_resource,
