@@ -46,5 +46,11 @@ TRIMBLE_KEY=xxxx
 ### fire the app
 python run.py
 
+pip install gspread
+pip install --upgrade oauth2client
+pip install PyOpenSSL
+
+see: http://gspread.readthedocs.io/en/latest/oauth2.html
+
 ### A related project:
 https://github.com/lorinma/SeeBIM

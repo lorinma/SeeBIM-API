@@ -351,7 +351,7 @@ entity_connect_resource={
             'GlobalId': 1,
         },
     },
-    'item_title': 'connect',
+    'item_title': 'connected',
     'schema': entity_schema
 }
 entity_parallel_extrusion_resource={
@@ -486,7 +486,28 @@ entity_overlap_z_resource={
     'item_title': 'overlapZ',
     'schema': entity_schema
 }
-
+entity_convex_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'convex',
+    'schema': entity_schema
+}
+entity_shape_features_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'shapeFeatures',
+    'schema': entity_schema
+}
 # get all the elements' features of a model
 file_model_shape_feature_resource={
     'datasource': {

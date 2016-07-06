@@ -40,6 +40,10 @@ from eve import Eve
 app = Eve()
 # app = Eve(settings='settings.py')
 
+
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
 ###########################################
 # add user
 def add_user(items):
@@ -190,7 +194,7 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 # pairwise features
 
 # touching or collision
-def get_item_connect(item):
+def get_item_connected(item):
     my_geometry = getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['Geometry']
     my_mesh=Geom(my_geometry).mesh
     my_bound=my_mesh.bounds.reshape(1,6)[0]
@@ -200,21 +204,27 @@ def get_item_connect(item):
     geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
     compare=list()
     for geometry in geometries:
+        print(geometry['Geometry']['Vertices'][0])
         mesh=Geom(geometry['Geometry']).mesh
-        bound=mesh.bounds.reshape(1,6)[0]
-        # bound=mesh.bounds
-        # bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
+        # bound=mesh.bounds.reshape(1,6)[0]
+        bound=mesh.bounds
+        bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
         potential_triangle_indices=list(my_tree.intersection(bound))
         if len(potential_triangle_indices)>0:
-            my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
-            checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
-            if True in checking_results:
-                compare.append({
-                    'EntityID':geometry['EntityID'],
-                    'GlobalId':geometry['GlobalId'],
-                    'Compare':1
-                })
-                continue
+            # my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
+            # checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
+            # if True in checking_results:
+            #     compare.append({
+            #         'EntityID':geometry['EntityID'],
+            #         'GlobalId':geometry['GlobalId'],
+            #         'Compare':1
+            #     })
+            #     continue
+            compare.append({
+                'EntityID':geometry['EntityID'],
+                'GlobalId':geometry['GlobalId'],
+                'Compare':1
+            })
         else:
             compare.append({
                 'EntityID':geometry['EntityID'],
@@ -227,7 +237,7 @@ def get_item_connect(item):
         'Vector':compare
     }
     app.config['DOMAIN']['geometry']['pagination'] = True
-app.on_fetched_item_connect+=get_item_connect
+app.on_fetched_item_connect+=get_item_connected
 
 # parallel extrusion
 threshhold_degree=5
@@ -670,6 +680,39 @@ def get_item_overlapZ(item):
     app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_overlapZ+=get_item_overlapZ
 
+# convex
+def get_item_convex(item):
+    my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"IsConvex","EntityID":item["_id"]})[0]
+    convex=my_feature['Feature']['Value']
+    if convex:
+        compare=1
+    else:
+        compare=-1
+    item['Compare']={
+        'Type':'Convex',
+        'Description':'I\'m convex',
+        'Vector':[{
+            'EntityID':item['_id'],
+            'GlobalId':my_feature['GlobalId'],
+            'Compare':compare
+        }]
+    }
+app.on_fetched_item_convex+=get_item_convex
+
+# get all shape features of this element
+def get_item_entityShapeFeatures(item):
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    vertical = getitem_internal('Vertical',**{"_id":item["_id"]})[0]
+    print(vertical)
+    item['ShapeFeatures']={
+        'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+        'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+        'Vertical':vertical['Compare']['Vector'][0]['Compare'],
+        'Convex':getitem_internal('convex',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+    }
+    item['GlobalId']=vertical['Compare']['Vector'][0]['GlobalId']
+    app.config['DOMAIN']['geometry']['pagination'] = True
+app.on_fetched_item_entityShapeFeatures+=get_item_entityShapeFeatures
 
 ###########################################
 # model's features
@@ -677,19 +720,66 @@ app.on_fetched_item_overlapZ+=get_item_overlapZ
 # shape feature of all the elements
 def get_item_modelShapeFeatures(item):
     app.config['DOMAIN']['geometry']['pagination'] = False
-    geometries = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
-    data=list()
-    for geometry in geometries:
-        data.append({
-            'EntityID':geometry['EntityID'],
-            'Features':{
-                'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
-                'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
-                'Vertical':getitem_internal('Vertical',**{"_id":geometry["EntityID"]})[0]['Compare']['Vector'][0]['Compare'],
-            },
-            'GlobalId':geometry['GlobalId'],
-        })
-    item['FeatureVector']=data
+    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+    scope = ['https://spreadsheets.google.com/feeds']
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
+    gc = gspread.authorize(credentials)
+    wks = gc.open("toy bridge of SeeBIM - Feature matching")
+    fact_shape_norm_matrix=list()
+    objects=list()
+    worksheet = wks.worksheet("Shape Feature Fact")
+    worksheet.resize(1,5)
+    objects_ids=list()
+    for entity in entities:
+        entity_id=entity['EntityID']
+        objects_ids.append(entity_id)
+        entity_info = getitem_internal('entityShapeFeatures',**{"_id":entity_id})[0]
+        GlobalId=entity_info['GlobalId']
+        features=entity_info['ShapeFeatures']
+        data=[features['ParallelBridgeLongitudinal'],features['ParallelBridgeTransverse'],features['Vertical'],features['Convex']]
+        worksheet.append_row([GlobalId,data[0],data[1],data[2]])
+    
+        objects.append(GlobalId)
+        norm=np.linalg.norm(data)   
+        norm_vector=np.divide(data,norm).tolist() 
+        fact_shape_norm_matrix.append(norm_vector)
+
+    Knowledge = wks.worksheet("Shape Feature Knowledge")
+    data=Knowledge.get_all_values()
+    elements=list()
+    knowledge_shape_norm_matrix=list()
+    for item in data[1:]:
+        elements.append(item[0])
+        v = np.array(item[1:], dtype='|S4').astype(np.float)
+        norm=np.linalg.norm(v)
+        norm_vector=list()
+        if(norm==0):
+            norm_vector=[0.0,0.0,0.0]
+        else:
+            norm_vector=np.divide(v,norm).tolist()
+        knowledge_shape_norm_matrix.append(norm_vector)
+    
+    products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    
+    worksheet_matching = wks.worksheet("Shape Feature Matching")
+    worksheet_matching.resize(1,len(elements)+1)
+    i=2
+    for element in elements:
+        worksheet_matching.update_cell(1, i, element)
+        i=i+1
+    j=0
+    for product in products:
+        product=np.clip(product,0,product.max())
+        if(sum(product)==0):
+            norm_vector=product
+        else:
+            norm_vector=np.divide(product,sum(product))
+        raw=list()
+        raw.append(objects[j])
+        j+=1
+        for cell in norm_vector:
+            raw.append(cell)
+        worksheet_matching.append_row(raw)
     app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 
@@ -736,200 +826,195 @@ app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 # app.on_delete_item_file+=delete_file
 # app.on_delete_resource_file+=delete_all_file
 
-# interaction with entity attributes
-def get_attribute_value(attributes,attribute_name):
-    for attribute in attributes:
-        if attribute['Name']==attribute_name:
-            return attribute['Value']
-    print("No such attribute")
-    return None
-def set_attribute_value(attributes,attribute_name,value):
-    for attribute in attributes:
-        if attribute['Name']==attribute_name:
-            attribute['Value']=value
-    return attributes
+# # interaction with entity attributes
+# def get_attribute_value(attributes,attribute_name):
+#     for attribute in attributes:
+#         if attribute['Name']==attribute_name:
+#             return attribute['Value']
+#     print("No such attribute")
+#     return None
+# def set_attribute_value(attributes,attribute_name,value):
+#     for attribute in attributes:
+#         if attribute['Name']==attribute_name:
+#             attribute['Value']=value
+#     return attributes
     
-# entity property set interaction
-def get_item_property_set(item):
-    properties=get_attribute_value(item['Attribute'],'HasProperties')
-    if properties is None:
-        return
-    # if the attribute like HasProperties only has 1 node, then it is a str instead of list
-    if isinstance(properties,str):
-        properties=[properties]
-    properties_data=list()
-    for property in properties:
-        try:
-            property_data=getitem_internal('entitySimple',**{"_id":property})
-            properties_data.append(property_data[0])
-        except:
-            print("No such property")
-    if len(properties_data)>0:
-        item['Properties']=properties_data
-def get_property_set(data):
-    items=data['_items']
-    for item in items:
-        get_item_property_set(item)        
-app.on_fetched_item_entityPropertySet+=get_item_property_set  
-app.on_fetched_resource_entityPropertySet+=get_property_set
-
-# reldefined
-def get_item_rel_property_set(item):
-    # do we really need try here?
-    try:
-        property_set_id=get_attribute_value(item['Attribute'],'RelatingPropertyDefinition')
-        if property_set_id is not None:
-            p_set=getitem_internal('entityPropertySet',**{"_id":ObjectId(property_set_id)})[0]
-            item['PropertySet']=p_set
-    except:
-        print("no property set linked in this relation")
-def get_rel_property_set(data):
-    items=data['_items']
-    for item in items:
-        get_item_rel_property_set(item)  
-app.on_fetched_item_entityRelProperties+=get_item_rel_property_set
-app.on_fetched_resource_entityRelProperties+=get_rel_property_set
-
-# entity with property set interaction
-# you can only query specific entity item
-def get_item_with_property(item):
-    rels = get_internal('entityRelProperties',**{"Attribute": {"$elemMatch":{"Value": str(item['_id']),"Name": "RelatedObjects"}}})[0]['_items']
-    if len(rels)>0:
-        item['PropertyDefinition']=rels
-    shape_feature = getitem_internal('geometryWithFeature',**{"EntityID":item["_id"]})[0]
-    item['Geometry']=shape_feature['Geometry']
-    features=list()
-    for feature in shape_feature['Features']:
-        features.append(feature)
-    item['Features']=features
-def get_resource_with_property(data):
-    items=data['_items']
-    for item in items:
-        get_item_with_property(item)  
-app.on_fetched_item_entityWithProperty+=get_item_with_property
-app.on_fetched_resource_entityWithProperty+=get_resource_with_property
-
-# shape and feature
-def get_item_shape_with_feature(item):
-    features = get_internal('geometryFeature',**{"GeometryID":item["_id"]})[0]['_items']
-    if len(features)>0:
-        item['Features']=list()
-        for feature in features:
-            item['Features'].append(feature['Feature'])
-    else:
-        item['Features']=list()
-        mesh=Geom(item['Geometry'])
-        payload=list()
-        obb_features=mesh.getOBB()
-        shape_features=mesh.getMeshFeature()
-        data=dict()
-        for obb_feature in obb_features:
-            payload.append({
-                'FileID':str(item['FileID']),
-                'GlobalId':str(item['GlobalId']),
-                'EntityID':str(item['EntityID']),
-                'GeometryID':str(item['_id']),
-                'Feature':obb_feature
-            })
-            item['Features'].append(obb_feature)
-        for shape_feature in shape_features:
-            payload.append({
-                'FileID':str(item['FileID']),
-                'GlobalId':str(item['GlobalId']),
-                'EntityID':str(item['EntityID']),
-                'GeometryID':str(item['_id']),
-                'Feature':shape_feature
-            })
-            item['Features'].append(shape_feature)
-        post_internal('geometryFeature',payload,skip_validation=True)
-def get_resource_shape_with_feature(data):
-    items=data['_items']
-    for item in items:
-        get_item_shape_with_feature(item)  
-def delete_geometry(item):
-    while 1:
-        features=get_internal('geometryFeature',**{'GeometryID': item["_id"]})[0]["_items"]
-        if len(features)<1:
-            break
-        for feature in features:
-            deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
-
-
-def delete_all_geometry():
-    items = get_internal('geometry')[0]['_items']
-    for item in items:
-        delete_geometry(item)
-app.on_fetched_item_geometryWithFeature+=get_item_shape_with_feature
-app.on_fetched_resource_geometryWithFeature+=get_resource_shape_with_feature
-
-app.on_delete_item_geometry+=delete_geometry
-app.on_delete_resource_geometry+=delete_all_geometry
-
-
-def getFeature(item,feature_name):
-    features=item['Features']
-    for feature in features:
-        if feature['Name']==feature_name:
-            return feature['Value']
-    return None
-    
-# Bug: cannot fetch these extra items, even not print 
-# def get_item_feature_entity(item):
-#     print("ol1")
-#     entity = getitem_internal('entityWithProperty',**{"_id":item["EntityID"]})[0]
-#     print(entity)
-#     item['Entity']=entity
-# def get_source_feature_entity(data):
-#     print("data")
-#     items=data['_items']
-#     print("ol")
-#     for item in items:
-#         get_item_feature_entity(item)  
-# app.on_fetched_item_geometryFeature+=get_item_feature_entity
-# app.on_fetched_source_geometryFeature+=get_source_feature_entity
-
-# query
-def get_item_query(item):
-    query=dict()
-    query["$and"]=list()
-    query['$and'].append({
-        "FileID":str(item["FileID"])
-    })
-    for clause in item['Clauses']:
-        query['$and'].append({
-            clause['Field']:{
-                clause['Operator']:clause['Value']
-            }
-        })
-    shape_features = get_internal('geometryFeature',**query)[0]['_items']
-    item['Data']=list()
-    for feature in shape_features:
-        item['Data'].append({
-            "EntityID":feature['EntityID'],
-            "GlobalId":feature['GlobalId'],
-        })
-# def get_source_query(data):
+# # entity property set interaction
+# def get_item_property_set(item):
+#     properties=get_attribute_value(item['Attribute'],'HasProperties')
+#     if properties is None:
+#         return
+#     # if the attribute like HasProperties only has 1 node, then it is a str instead of list
+#     if isinstance(properties,str):
+#         properties=[properties]
+#     properties_data=list()
+#     for property in properties:
+#         try:
+#             property_data=getitem_internal('entitySimple',**{"_id":property})
+#             properties_data.append(property_data[0])
+#         except:
+#             print("No such property")
+#     if len(properties_data)>0:
+#         item['Properties']=properties_data
+# def get_property_set(data):
 #     items=data['_items']
 #     for item in items:
-#         get_item_query(item)  
-app.on_fetched_item_query+=get_item_query
-# app.on_fetched_source_query+=get_source_query
+#         get_item_property_set(item)        
+# app.on_fetched_item_entityPropertySet+=get_item_property_set  
+# app.on_fetched_resource_entityPropertySet+=get_property_set
 
+# # reldefined
+# def get_item_rel_property_set(item):
+#     # do we really need try here?
+#     try:
+#         property_set_id=get_attribute_value(item['Attribute'],'RelatingPropertyDefinition')
+#         if property_set_id is not None:
+#             p_set=getitem_internal('entityPropertySet',**{"_id":ObjectId(property_set_id)})[0]
+#             item['PropertySet']=p_set
+#     except:
+#         print("no property set linked in this relation")
+# def get_rel_property_set(data):
+#     items=data['_items']
+#     for item in items:
+#         get_item_rel_property_set(item)  
+# app.on_fetched_item_entityRelProperties+=get_item_rel_property_set
+# app.on_fetched_resource_entityRelProperties+=get_rel_property_set
 
-def get_user_by_firebase_uid(firebase_uid):
-    return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
-def get_token_item(item):
-    para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
-    headers={"Content-Type":"application/json"}
-    r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
-    item['token']=r.json()['token']
-def get_token(items):
-    for item in items['_items']:
-        get_token_item(item)
-app.on_fetched_item_trimbleToken+=get_token_item
-app.on_fetched_resource_trimbleToken+=get_token
+# # entity with property set interaction
+# # you can only query specific entity item
+# def get_item_with_property(item):
+#     rels = get_internal('entityRelProperties',**{"Attribute": {"$elemMatch":{"Value": str(item['_id']),"Name": "RelatedObjects"}}})[0]['_items']
+#     if len(rels)>0:
+#         item['PropertyDefinition']=rels
+#     shape_feature = getitem_internal('geometryWithFeature',**{"EntityID":item["_id"]})[0]
+#     item['Geometry']=shape_feature['Geometry']
+#     features=list()
+#     for feature in shape_feature['Features']:
+#         features.append(feature)
+#     item['Features']=features
+# def get_resource_with_property(data):
+#     items=data['_items']
+#     for item in items:
+#         get_item_with_property(item)  
+# app.on_fetched_item_entityWithProperty+=get_item_with_property
+# app.on_fetched_resource_entityWithProperty+=get_resource_with_property
 
+# # shape and feature
+# def get_item_shape_with_feature(item):
+#     features = get_internal('geometryFeature',**{"GeometryID":item["_id"]})[0]['_items']
+#     if len(features)>0:
+#         item['Features']=list()
+#         for feature in features:
+#             item['Features'].append(feature['Feature'])
+#     else:
+#         item['Features']=list()
+#         mesh=Geom(item['Geometry'])
+#         payload=list()
+#         obb_features=mesh.getOBB()
+#         shape_features=mesh.getMeshFeature()
+#         data=dict()
+#         for obb_feature in obb_features:
+#             payload.append({
+#                 'FileID':str(item['FileID']),
+#                 'GlobalId':str(item['GlobalId']),
+#                 'EntityID':str(item['EntityID']),
+#                 'GeometryID':str(item['_id']),
+#                 'Feature':obb_feature
+#             })
+#             item['Features'].append(obb_feature)
+#         for shape_feature in shape_features:
+#             payload.append({
+#                 'FileID':str(item['FileID']),
+#                 'GlobalId':str(item['GlobalId']),
+#                 'EntityID':str(item['EntityID']),
+#                 'GeometryID':str(item['_id']),
+#                 'Feature':shape_feature
+#             })
+#             item['Features'].append(shape_feature)
+#         post_internal('geometryFeature',payload,skip_validation=True)
+# def get_resource_shape_with_feature(data):
+#     items=data['_items']
+#     for item in items:
+#         get_item_shape_with_feature(item)  
+# def delete_geometry(item):
+#     while 1:
+#         features=get_internal('geometryFeature',**{'GeometryID': item["_id"]})[0]["_items"]
+#         if len(features)<1:
+#             break
+#         for feature in features:
+#             deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
 
+# def delete_all_geometry():
+#     items = get_internal('geometry')[0]['_items']
+#     for item in items:
+#         delete_geometry(item)
+# app.on_fetched_item_geometryWithFeature+=get_item_shape_with_feature
+# app.on_fetched_resource_geometryWithFeature+=get_resource_shape_with_feature
+
+# app.on_delete_item_geometry+=delete_geometry
+# app.on_delete_resource_geometry+=delete_all_geometry
+
+# def getFeature(item,feature_name):
+#     features=item['Features']
+#     for feature in features:
+#         if feature['Name']==feature_name:
+#             return feature['Value']
+#     return None
+    
+# # Bug: cannot fetch these extra items, even not print 
+# # def get_item_feature_entity(item):
+# #     print("ol1")
+# #     entity = getitem_internal('entityWithProperty',**{"_id":item["EntityID"]})[0]
+# #     print(entity)
+# #     item['Entity']=entity
+# # def get_source_feature_entity(data):
+# #     print("data")
+# #     items=data['_items']
+# #     print("ol")
+# #     for item in items:
+# #         get_item_feature_entity(item)  
+# # app.on_fetched_item_geometryFeature+=get_item_feature_entity
+# # app.on_fetched_source_geometryFeature+=get_source_feature_entity
+
+# # query
+# def get_item_query(item):
+#     query=dict()
+#     query["$and"]=list()
+#     query['$and'].append({
+#         "FileID":str(item["FileID"])
+#     })
+#     for clause in item['Clauses']:
+#         query['$and'].append({
+#             clause['Field']:{
+#                 clause['Operator']:clause['Value']
+#             }
+#         })
+#     shape_features = get_internal('geometryFeature',**query)[0]['_items']
+#     item['Data']=list()
+#     for feature in shape_features:
+#         item['Data'].append({
+#             "EntityID":feature['EntityID'],
+#             "GlobalId":feature['GlobalId'],
+#         })
+# # def get_source_query(data):
+# #     items=data['_items']
+# #     for item in items:
+# #         get_item_query(item)  
+# app.on_fetched_item_query+=get_item_query
+# # app.on_fetched_source_query+=get_source_query
+
+# def get_user_by_firebase_uid(firebase_uid):
+#     return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
+# def get_token_item(item):
+#     para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
+#     headers={"Content-Type":"application/json"}
+#     r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
+#     item['token']=r.json()['token']
+# def get_token(items):
+#     for item in items['_items']:
+#         get_token_item(item)
+# app.on_fetched_item_trimbleToken+=get_token_item
+# app.on_fetched_resource_trimbleToken+=get_token
 
 if __name__ == '__main__':
     # app.run()

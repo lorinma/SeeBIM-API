@@ -59,6 +59,8 @@ DOMAIN= {
     'paraBriTrans':schema.entity_parallel_bridge_transverse_resource,
     'Vertical':schema.entity_vertical_resource,
     'overlapZ':schema.entity_overlap_z_resource,
+    'convex':schema.entity_convex_resource,
+    'entityShapeFeatures':schema.entity_shape_features_resource,
     
     'modelShapeFeature':schema.file_model_shape_feature_resource,
 
