@@ -385,9 +385,6 @@ entity_withGeometryFeature_resource={
     'schema': entity_schema
 }
 
-
-
-
 # either touching or collision
 entity_connect_resource={
     'datasource': {

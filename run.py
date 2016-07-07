@@ -175,9 +175,9 @@ def longgerExtrusion(my_mesh, mesh):
         return 1
     else:
         return -1
-        
+    
 def bigger(my_mesh, mesh):
-    if my_mesh.volume>mesh.volume:
+    if my_mesh.mesh.volume>mesh.mesh.volume:
         return 1
     else:
         return -1    
@@ -186,29 +186,6 @@ def above(my_mesh, mesh):
         return 1
     else:
         return -1    
-def bridgeCentroid(meshes):
-    centroid=list()
-    min=list()
-    max=list()
-    for mesh in meshes:
-        if len(centroid)==0:
-            min=mesh.min
-            max=mesh.max
-        else:
-            if min[0]>mesh.min[0]:
-                min[0]=mesh.min[0]
-            if min[1]>mesh.min[1]:
-                min[1]=mesh.min[1]
-            if min[2]>mesh.min[2]:
-                min[2]=mesh.min[2]
-                
-            if max[0]<mesh.max[0]:
-                max[0]=mesh.max[0]
-            if max[1]<mesh.max[1]:
-                max[1]=mesh.max[1]
-            if max[2]<mesh.max[2]:
-                max[2]=mesh.max[2]
-    return [(min[0]+max[0])/2,(min[1]+max[1])/2,(min[2]+max[2])/2]
 def closer_longitudinal(my_mesh, mesh,bridge_centroid):
     if abs(my_mesh.centroid[1]-bridge_centroid[1])<abs(mesh.centroid[1]-bridge_centroid[1]):
         return 1
@@ -220,16 +197,20 @@ def closer_transverse(my_mesh, mesh,bridge_centroid):
     else:
         return -1
 def overlapZ(my_mesh, mesh):
-    if my_mesh.min[2]<=mesh.max[2] and mesh.min[2]<=my_mesh.max[2]:
+    if my_mesh.min[2]<mesh.max[2] and mesh.min[2]<my_mesh.max[2]:
         return 1
     else:
-        return -1    
+        return -1 
+        
 # add geometry and related features
 def add_geometry(items):
     meshes=list()
     entityIds=list()
     globalIds=list()
     payload=list()
+    
+    bridge_min=list()
+    bridge_max=list()
     for item in items:
         entity = getitem_internal('entity',**{"$and": [{"FileID":str(item["FileID"])},{"Attribute": {"$elemMatch":{"Value": str(item["GlobalId"]),"Name": "GlobalId"}}}]})[0]
         item['EntityID']=entity["_id"]
@@ -254,59 +235,80 @@ def add_geometry(items):
                 'EntityID':str(item['EntityID']),
                 'Feature':shape_feature
             })
-    post_internal('geometryFeature',payload,skip_validation=True)
-    
-    bridge_centroid=bridgeCentroid(meshes)
-    
-    # pair_payload=list()
-    # for i in range(len(entityIds)):
-    #     my_mesh=meshes[i]
-    #     my_id=entityIds[i]
-    #     my_globalId=globalIds[i]
         
-    #     connect_vector=list()
-    #     para_vector=list()
-    #     centorid_vector=list()
-    #     bottom_vector=list()
-    #     longger_vector=list()
-    #     bigger_vector=list()
-    #     above_vector=list()
-    #     closer_longitudinal_vector=list()
-    #     closer_transverse_vector=list()
-    #     overlapZ_vector=list()
-    #     for j in range(len(entityIds)):
-    #         your_globalId=globalIds[j]
-    #         if my_globalId==your_globalId:
-    #             continue
-    #         your_mesh=meshes[j]
-    #         your_id=entityIds[j]
+        if len(bridge_min)==0:
+            bridge_min=mesh.min
+            bridge_max=mesh.max
+        else:
+            if bridge_min[0]>mesh.min[0]:
+                bridge_min[0]=mesh.min[0]
+            if bridge_min[1]>mesh.min[1]:
+                bridge_min[1]=mesh.min[1]
+            if bridge_min[2]>mesh.min[2]:
+                bridge_min[2]=mesh.min[2]
+                
+            if bridge_max[0]<mesh.max[0]:
+                bridge_max[0]=mesh.max[0]
+            if bridge_max[1]<mesh.max[1]:
+                bridge_max[1]=mesh.max[1]
+            if bridge_max[2]<mesh.max[2]:
+                bridge_max[2]=mesh.max[2]
+                
+    post_internal('geometryFeature',payload,skip_validation=True)
+    # bridge_centroid=bridgeCentroid(meshes)
+    bridge_centroid=[(bridge_min[0]+bridge_max[0])/2,(bridge_min[1]+bridge_max[1])/2,(bridge_min[2]+bridge_max[2])/2]
+    print(len(entityIds))
+    pair_payload=list()
+    for i in range(len(entityIds)):
+        my_mesh=meshes[i]
+        my_id=entityIds[i]
+        my_globalId=globalIds[i]
+        
+        connect_vector=list()
+        para_vector=list()
+        centorid_vector=list()
+        bottom_vector=list()
+        longger_vector=list()
+        bigger_vector=list()
+        above_vector=list()
+        closer_longitudinal_vector=list()
+        closer_transverse_vector=list()
+        overlapZ_vector=list()
+        
+        for j in range(len(entityIds)):
+            your_globalId=globalIds[j]
+            if my_globalId==your_globalId:
+                continue
+            your_mesh=meshes[j]
+            your_id=entityIds[j]
 
-    #         connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
-    #         para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
-    #         centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
-    #         bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
-    #         # longger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':longgerExtrusion(my_mesh,your_mesh)})
-    #         # bigger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':bigger(my_mesh,your_mesh)})
-    #         # above_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':above(my_mesh,your_mesh)})
-    #         # closer_longitudinal_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_longitudinal(my_mesh,your_mesh,bridge_centroid)})
-    #         # closer_transverse_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_transverse(my_mesh,your_mesh,bridge_centroid)})
-    #         # overlapZ_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':overlapZ(my_mesh,your_mesh)})
+            connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
+            para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
+            centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
+            bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
+            longger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':longgerExtrusion(my_mesh,your_mesh)})
+            bigger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':bigger(my_mesh,your_mesh)})
+            above_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':above(my_mesh,your_mesh)})
+            closer_longitudinal_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_longitudinal(my_mesh,your_mesh,bridge_centroid)})
+            closer_transverse_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_transverse(my_mesh,your_mesh,bridge_centroid)})
+            overlapZ_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':overlapZ(my_mesh,your_mesh)})
             
-    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
-    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
-    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
-    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Longger','Description':'either touching or collision','Vector':longger_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Bigger','Description':'bigger','Vector':bigger_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':above_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserLongitudinal','Description':'closer_longitudinal_vector','Vector':closer_longitudinal_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserTransverse','Description':'closer_transverse_vector','Vector':closer_transverse_vector}})
-    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserLongitudinal','Description':'closer_longitudinal_vector','Vector':overlapZ_vector}})
-    # post_internal('pairwiseFeature',pair_payload,skip_validation=True)
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Longger','Description':'either touching or collision','Vector':longger_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Bigger','Description':'bigger','Vector':bigger_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Above','Description':'I\'ve higher centroid','Vector':above_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserLongitudinal','Description':'closer_longitudinal_vector','Vector':closer_longitudinal_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserTransverse','Description':'closer_transverse_vector','Vector':closer_transverse_vector}})
+        pair_payload.append({'EntityID':my_id,'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'OverlapZ','Description':'overlapZ_vector','Vector':overlapZ_vector}})
+    post_internal('pairwiseFeature',pair_payload,skip_validation=True)
 app.on_insert_geometry+=add_geometry
 
 ###########################################
 # entity with shape and feature
+
 def get_item_with_shape(item):
     # TODO here needs to take care of pagination when they are more than 1 page
     geoms = get_internal('geometry',**{"EntityID":item["_id"]})[0]['_items']
@@ -319,10 +321,16 @@ def get_item_with_shape(item):
         # an product will have no more than 1 geom
         for feature in features:
             item['Features'].append(feature['Feature'])
+    pairFeatures = get_internal('pairwiseFeature',**{"EntityID":item["_id"]})[0]['_items']
+    if len(features)>0:
+        item['PairwiseFeature']=list()
+        # an product will have no more than 1 geom
+        for pairFeature in pairFeatures:
+            item['PairwiseFeature'].append(pairFeature['Feature'])
 def get_source_with_shape(data):
     items=data['_items']
     for item in items:
-        get_item_with_property(item)  
+        get_item_with_shape(item)  
 app.on_fetched_item_entityGeomFeature+=get_item_with_shape
 app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 
@@ -333,974 +341,977 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 #     lookup["PropertySets"] = {'$exists': True}
 # app.on_pre_GET_entityGeomFeature += pre_get_entity_geom_feature
 
-###########################################
-# pairwise features
+# ###########################################
+# # pairwise features
 
-# touching or collision
-def get_item_connected(item):
-    my_geometry = getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['Geometry']
-    my_mesh=Geom(my_geometry).mesh
-    my_bound=my_mesh.bounds.reshape(1,6)[0]
-    my_tree=my_mesh.triangles_tree()
-    
-    app.config['DOMAIN']['geometry']['pagination'] = False
-    geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    compare=list()
-    for geometry in geometries:
-        mesh=Geom(geometry['Geometry']).mesh
-        # bound=mesh.bounds.reshape(1,6)[0]
-        bound=mesh.bounds
-        bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
-        potential_triangle_indices=list(my_tree.intersection(bound))
-        if len(potential_triangle_indices)>0:
-            # my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
-            # checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
-            # if True in checking_results:
-            #     compare.append({
-            #         'EntityID':geometry['EntityID'],
-            #         'GlobalId':geometry['GlobalId'],
-            #         'Compare':1
-            #     })
-            #     continue
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Connect',
-        'Description':'either touching or collision',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometry']['pagination'] = True
-app.on_fetched_item_connect+=get_item_connected
+# # get all shape features of this element
+# def get_item_entityShapeFeatures(item):
+#     vertical = getitem_internal('Vertical',**{"_id":item["_id"]})[0]
+#     item['ShapeFeatures']={
+#         'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+#         'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+#         'Vertical':vertical['Compare']['Vector'][0]['Compare'],
+#         'Convex':getitem_internal('convex',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
+#     }
+#     item['GlobalId']=vertical['Compare']['Vector'][0]['GlobalId']
+# app.on_fetched_item_entityShapeFeatures+=get_item_entityShapeFeatures
 
-# parallel extrusion
-threshhold_degree=5
-def get_item_parallel_extrusion(item):
-    my_axis = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]['Feature']['Value']
-    
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    extrusions = get_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    compare=list()
-    for extrusion in extrusions:
-        axis=extrusion['Feature']['Value']
-        # the angle in degree
-        import math
-        absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,axis))))
-        # if the angle is lowere than 5
-        if absolute_angle<threshhold_degree:
-            compare.append({
-                'EntityID':extrusion['EntityID'],
-                'GlobalId':extrusion['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':extrusion['EntityID'],
-                'GlobalId':extrusion['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Parallel',
-        'Description':'we are in parallel',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_paraExtrusion+=get_item_parallel_extrusion
-
-# higher centroid
-def get_item_higherCentroid(item):
-    level = getitem_internal('geometryFeature',**{"Feature.Name":"OBBCentroid","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # file_id=str(item["FileID"])
-    file_id=item["FileID"]
-    compare={'Type':'Volume',
-        'Description':'I\'m higher than them',
-        'Vector':[]
-    }
-    query_greater={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$gt":level}}]}
-    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':-1
-        })
-    query_smaller={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$lte":level}}]}
-    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':1
-        })
-    if len(compare['Vector'])>0:
-        item['Compare']=compare
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_higherCentroid+=get_item_higherCentroid
-
-# higher centroid
-def get_item_lowerBottom(item):
-    level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # file_id=str(item["FileID"])
-    file_id=item["FileID"]
-    compare={'Type':'Volume',
-        'Description':'I\'m lower than them',
-        'Vector':[]
-    }
-    query_greater={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Min"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$gt":level}}]}
-    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':1
-        })
-    query_smaller={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Min"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value.Z":{"$lte":level}}]}
-    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':-1
-        })
-    if len(compare['Vector'])>0:
-        item['Compare']=compare
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_lowerBottom+=get_item_lowerBottom
-
-# longger extrusion
-def get_item_longgerExtrusion(item):
-    extrusion = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrusionLength","EntityID":item["_id"]})[0]['Feature']['Value']
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # file_id=str(item["FileID"])
-    file_id=item["FileID"]
-    compare={'Type':'Volume',
-        'Description':'I\'m longger than them',
-        'Vector':[]
-    }
-    query_greater={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value":{"$gt":extrusion}}]}
-    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':-1
-        })
-    query_smaller={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
-        {"Feature.Value":{"$lte":extrusion}}]}
-    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':1
-        })
-    if len(compare['Vector'])>0:
-        item['Compare']=compare
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_longgerExtrusion+=get_item_longgerExtrusion
-
-# parallel extrusion
-threshhold_degree=5
-bridge_longitudinal=[1,0,0]
-def get_item_parallelBridge(item):
-    my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
-    my_axis=my_feature['Feature']['Value']
-    import math
-    absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,bridge_longitudinal))))
-        # if the angle is lowere than 5
-    if absolute_angle<threshhold_degree:
-        compare=1
-    else:
-        compare=-1
-    item['Compare']={
-        'Type':'Parallel',
-        'Description':'we are in parallel',
-        'Vector':[{
-            'EntityID':item['_id'],
-            'GlobalId':my_feature['GlobalId'],
-            'Compare':compare
-        }]
-    }
-app.on_fetched_item_parallelBridge+=get_item_parallelBridge
-
-# compare volume
-def get_item_volumeBigger(item):
-    volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    # file_id=str(item["FileID"])
-    file_id=item["FileID"]
-    compare={'Type':'Volume',
-        'Description':'My Volume is greater than theirs',
-        'Vector':[]
-    }
-    query_greater={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$gt":volume}},{"EntityID":{'$ne':item["_id"]}}]}
-    greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
-    for entity in greater_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':-1
-        })
-    query_smaller={"$and": [
-        {"FileID":file_id},
-        {"Feature.Name":"Volume"},
-        {"Feature.Value":{"$lte":volume}},{"EntityID":{'$ne':item["_id"]}}]}
-    smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
-    for entity in smaller_entities:
-        compare['Vector'].append({
-            'EntityID':entity['EntityID'],
-            'GlobalId':entity['GlobalId'],
-            'Compare':1
-        })
-    if len(compare['Vector'])>0:
-        item['Compare']=compare
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_volumeBigger+=get_item_volumeBigger
-
-# complete above
-def get_item_completeAbove(item):
-    lowest_level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    features = get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    compare=list()
-    for feature in features:
-        max_level=feature['Feature']['Value']['Z']
-        if lowest_level>max_level or np.isclose(lowest_level,max_level,atol=1e-1):
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Completely above',
-        'Description':'I\'m completely above them',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_completeAbove+=get_item_completeAbove
-
-# closer to bridge's Longitudinal axis
-bridge_longitudinal_axis='X'
-bridge_transverse_axis='Y'
-def bridgeCentroid(fileID):
-    mins=get_internal('geometryFeature',**{"Feature.Name":"Min","FileID":fileID})[0]['_items']
-    model_min=dict()
-    for min in mins:
-        if not model_min:
-            model_min['X']=min['Feature']['Value']['X']
-            model_min['Y']=min['Feature']['Value']['Y']
-            model_min['Z']=min['Feature']['Value']['Z']
-            continue
-        if model_min['X']>min['Feature']['Value']['X']:
-            model_min['X']=min['Feature']['Value']['X']
-        if model_min['Y']>min['Feature']['Value']['Y']:
-            model_min['Y']=min['Feature']['Value']['Y']
-        if model_min['Z']>min['Feature']['Value']['Z']:
-            model_min['Z']=min['Feature']['Value']['Z']
-    maxs=get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":fileID})[0]['_items']
-    model_max=dict()
-    for max in maxs:
-        if not model_max:
-            model_max['X']=max['Feature']['Value']['X']
-            model_max['Y']=max['Feature']['Value']['Y']
-            model_max['Z']=max['Feature']['Value']['Z']
-            continue
-        if model_max['X']<max['Feature']['Value']['X']:
-            model_max['X']=max['Feature']['Value']['X']
-        if model_max['Y']<max['Feature']['Value']['Y']:
-            model_max['Y']=max['Feature']['Value']['Y']
-        if model_max['Z']<max['Feature']['Value']['Z']:
-            model_max['Z']=max['Feature']['Value']['Z']
-    return {
-        'X':(model_max['X']+model_min['X'])/2,
-        'Y':(model_max['Y']+model_min['Y'])/2,
-        'Z':(model_max['Z']+model_min['Z'])/2,
-    }
-    
-    # geometries=get_internal('geometry',**{"FileID":fileID})[0]['_items']
-    # data=dict()
-    # v_len=0
-    # for geometry in geometries:
-    #     v_array=geometry['Geometry']['Vertices']
-    #     f_array=geometry['Geometry']['Faces']
-    #     np.add(f_array,v_len)
-    #     n_array=geometry['Geometry']['Normals']
-    #     if not data:
-    #         data['Vertices']=v_array
-    #         data['Faces']=f_array
-    #         data['Normals']=n_array
-    #     else:
-    #         data['Vertices']=np.concatenate((data['Vertices'],v_array),axis=0).tolist()
-    #         data['Faces']=np.concatenate((data['Faces'],f_array),axis=0).tolist()
-    #         data['Normals']=np.concatenate((data['Normals'],n_array),axis=0).tolist()
-    #     v_len=len(v_array)
-    # # ceontroid=np.mean(data['Vertices'],axis=0).tolist()
-    # model=Geom(data)
-    # ceontroid=np.mean(model.mesh.bounds,axis=0).tolist()
-    # # ceontroid=model.mesh.centroid.tolist()
-    # return {
-    #     'X':ceontroid[0],
-    #     'Y':ceontroid[1],
-    #     'Z':ceontroid[2]
-    # }
-def get_item_closerTransverseCoordinate(item):
-    my_t_c = getitem_internal('geometryFeature',**{"Feature.Name":"Centroid","EntityID":item["_id"]})[0]['Feature']['Value'][bridge_transverse_axis]
-    bridge_centroid=bridgeCentroid(item['FileID'])
-    b_t_c=bridge_centroid[bridge_transverse_axis]
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    features = get_internal('geometryFeature',**{"Feature.Name":"Centroid","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    compare=list()
-    for feature in features:
-        t_c=feature['Feature']['Value'][bridge_transverse_axis]
-        if abs(my_t_c-b_t_c)<=abs(t_c-b_t_c):
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Completely above',
-        'Description':'I\'m closer to bridge\'s Longitudinal axis',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-def get_item_closerLongitudinalCoordinate(item):
-    my_centroid = getitem_internal('geometryFeature',**{"Feature.Name":"Centroid","EntityID":item["_id"]})[0]['Feature']['Value']
-    my_t_c=my_centroid[bridge_longitudinal_axis]
-    bridge_centroid=bridgeCentroid(item['FileID'])
-    b_t_c=bridge_centroid[bridge_longitudinal_axis]
-    # to make sure we can retrieve all the documents
-    app.config['DOMAIN']['geometryFeature']['pagination'] = False
-    features = get_internal('geometryFeature',**{"Feature.Name":"Centroid","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    compare=list()
-    for feature in features:
-        t_c=feature['Feature']['Value'][bridge_longitudinal_axis]
-        if abs(my_t_c-b_t_c)<=abs(t_c-b_t_c):
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':feature['EntityID'],
-                'GlobalId':feature['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Completely above',
-        'Description':'I\'m closer to bridge\'s Longitudinal axis',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometryFeature']['pagination'] = True
-app.on_fetched_item_closerTran+=get_item_closerLongitudinalCoordinate
-app.on_fetched_item_closerLongi+=get_item_closerTransverseCoordinate
-
-# parallel bridge's transverse direction
-threshhold_degree=5
-bridge_transverse=[0,1,0]
-def get_item_paraBriTrans(item):
-    my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
-    my_axis=my_feature['Feature']['Value']
-    import math
-    absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,bridge_transverse))))
-        # if the angle is lowere than 5
-    if absolute_angle<threshhold_degree:
-        compare=1
-    else:
-        compare=-1
-    item['Compare']={
-        'Type':'Parallel',
-        'Description':'we are in parallel',
-        'Vector':[{
-            'EntityID':item['_id'],
-            'GlobalId':my_feature['GlobalId'],
-            'Compare':compare
-        }]
-    }
-app.on_fetched_item_paraBriTrans+=get_item_paraBriTrans
-
-# parallel z
-threshhold_degree=5
-Z=[0,0,1]
-def get_item_Vertical(item):
-    my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
-    my_axis=my_feature['Feature']['Value']
-    import math
-    absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,Z))))
-        # if the angle is lowere than 5
-    if absolute_angle<threshhold_degree:
-        compare=1
-    else:
-        compare=-1
-    item['Compare']={
-        'Type':'Parallel',
-        'Description':'I\'m vertical',
-        'Vector':[{
-            'EntityID':item['_id'],
-            'GlobalId':my_feature['GlobalId'],
-            'Compare':compare
-        }]
-    }
-app.on_fetched_item_Vertical+=get_item_Vertical
-
-# overlap in z [0,0,1]
-def get_item_overlapZ(item):
-    my_min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    my_max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
-    app.config['DOMAIN']['geometry']['pagination'] = False
-    geometries = get_internal('geometry',**{"FileID":item["FileID"]})[0]['_items']
-    compare=list()
-    for geometry in geometries:
-        min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
-        max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
-        if my_min<max and my_max>min:
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':1
-            })
-        else:
-            compare.append({
-                'EntityID':geometry['EntityID'],
-                'GlobalId':geometry['GlobalId'],
-                'Compare':-1
-            })
-    item['Compare']={
-        'Type':'Completely above',
-        'Description':'I overlap with them in z',
-        'Vector':compare
-    }
-    app.config['DOMAIN']['geometry']['pagination'] = True
-app.on_fetched_item_overlapZ+=get_item_overlapZ
-
-# convex
-def get_item_convex(item):
-    my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"IsConvex","EntityID":item["_id"]})[0]
-    convex=my_feature['Feature']['Value']
-    if convex:
-        compare=1
-    else:
-        compare=-1
-    item['Compare']={
-        'Type':'Convex',
-        'Description':'I\'m convex',
-        'Vector':[{
-            'EntityID':item['_id'],
-            'GlobalId':my_feature['GlobalId'],
-            'Compare':compare
-        }]
-    }
-app.on_fetched_item_convex+=get_item_convex
-
-# get all shape features of this element
-def get_item_entityShapeFeatures(item):
-    vertical = getitem_internal('Vertical',**{"_id":item["_id"]})[0]
-    item['ShapeFeatures']={
-        'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
-        'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
-        'Vertical':vertical['Compare']['Vector'][0]['Compare'],
-        'Convex':getitem_internal('convex',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
-    }
-    item['GlobalId']=vertical['Compare']['Vector'][0]['GlobalId']
-app.on_fetched_item_entityShapeFeatures+=get_item_entityShapeFeatures
-
-# get all shape features of this element
-def get_item_entityPairFeatures(item):
-    app.config['DOMAIN']['geometry']['pagination'] = False
-    others=get_internal('geometry',**{"EntityID":{'$ne':item["_id"]}})[0]['_items']
-    featurs=['Contact','Parallel extrusion','Higher centroid', 'Lower bottom',	'Longger extrusion',	'Bigger',	'Complete above',	'Closer to transverse axis',	'Closer to longitudinal axis',	'Overlap in z']
-    my_globalid=getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['GlobalId']
-    GlobalIds=list()
-    for other in others:
-        GlobalIds.append({
-            my_globalid:other['GlobalId']
-            }
-        )
+# # get all pair features of this element
+# def get_item_entityPairFeatures(item):
+#     app.config['DOMAIN']['geometry']['pagination'] = False
+#     others=get_internal('geometry',**{"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     featurs=['Contact','Parallel extrusion','Higher centroid', 'Lower bottom',	'Longger extrusion',	'Bigger',	'Complete above',	'Closer to transverse axis',	'Closer to longitudinal axis',	'Overlap in z']
+#     my_globalid=getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['GlobalId']
+#     GlobalIds=list()
+#     for other in others:
+#         GlobalIds.append({
+#             my_globalid:other['GlobalId']
+#             }
+#         )
         
-    app.config['DOMAIN']['geometry']['pagination'] = True
-    data=dict()
-    matrix=list()
-    vector=list()
+#     app.config['DOMAIN']['geometry']['pagination'] = True
+#     data=dict()
+#     matrix=list()
+#     vector=list()
     
-    connect = getitem_internal('connect',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in connect:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     connect = getitem_internal('connect',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in connect:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    paraExtrusion = getitem_internal('paraExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in paraExtrusion:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     paraExtrusion = getitem_internal('paraExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in paraExtrusion:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    higherCentroid = getitem_internal('higherCentroid',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in higherCentroid:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     higherCentroid = getitem_internal('higherCentroid',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in higherCentroid:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    lowerBottom = getitem_internal('lowerBottom',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in lowerBottom:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     lowerBottom = getitem_internal('lowerBottom',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in lowerBottom:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    longgerExtrusion = getitem_internal('longgerExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in longgerExtrusion:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     longgerExtrusion = getitem_internal('longgerExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in longgerExtrusion:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    volumeBigger = getitem_internal('volumeBigger',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in volumeBigger:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     volumeBigger = getitem_internal('volumeBigger',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in volumeBigger:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    completeAbove = getitem_internal('completeAbove',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in completeAbove:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     completeAbove = getitem_internal('completeAbove',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in completeAbove:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    closerTran = getitem_internal('closerTran',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in closerTran:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     closerTran = getitem_internal('closerTran',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in closerTran:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    closerLongi = getitem_internal('closerLongi',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in closerLongi:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     closerLongi = getitem_internal('closerLongi',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in closerLongi:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    overlapZ = getitem_internal('overlapZ',**{"_id":item["_id"]})[0]['Compare']['Vector']
-    for it in overlapZ:
-        data[it['EntityID']]=it['Compare']
-    for other in others:
-        vector.append(data[other['EntityID']])
-    matrix.append(vector)
+#     overlapZ = getitem_internal('overlapZ',**{"_id":item["_id"]})[0]['Compare']['Vector']
+#     for it in overlapZ:
+#         data[it['EntityID']]=it['Compare']
+#     for other in others:
+#         vector.append(data[other['EntityID']])
+#     matrix.append(vector)
     
-    t_matrix=np.transpose(matrix)
-    matrix_norm=list()
-    for v in t_matrix:
-        norm=np.linalg.norm(v)
-        norm_vector=list()
-        if(norm==0):
-            norm_vector=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
-        else:
-            norm_vector=np.divide(v,norm).tolist()
-        matrix_norm.append(norm_vector)
-    item["Matrix"]=matrix_norm
-    item["Relations"]=GlobalIds
-    item['Features']=featurs
-    item['GlobalId']=my_globalid
-app.on_fetched_item_entityPairFeatures+=get_item_entityPairFeatures
-
-###########################################
-# model's features
-
-# shape feature of all the elements
-def get_item_modelShapeFeatures(item):
-    app.config['DOMAIN']['geometry']['pagination'] = False
-    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
-    scope = ['https://spreadsheets.google.com/feeds']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
-    gc = gspread.authorize(credentials)
-    wks = gc.open("toy bridge of SeeBIM - Feature matching")
-    fact_shape_norm_matrix=list()
-    objects=list()
-    worksheet = wks.worksheet("Shape Feature Fact")
-    worksheet.resize(1,5)
-    objects_ids=list()
-    for entity in entities:
-        entity_id=entity['EntityID']
-        objects_ids.append(entity_id)
-        entity_info = getitem_internal('entityShapeFeatures',**{"_id":entity_id})[0]
-        GlobalId=entity_info['GlobalId']
-        features=entity_info['ShapeFeatures']
-        data=[features['ParallelBridgeLongitudinal'],features['ParallelBridgeTransverse'],features['Vertical'],features['Convex']]
-        worksheet.append_row([GlobalId,data[0],data[1],data[2]])
-    
-        objects.append(GlobalId)
-        norm=np.linalg.norm(data)   
-        norm_vector=np.divide(data,norm).tolist() 
-        fact_shape_norm_matrix.append(norm_vector)
-
-    Knowledge = wks.worksheet("Shape Feature Knowledge")
-    data=Knowledge.get_all_values()
-    elements=list()
-    knowledge_shape_norm_matrix=list()
-    for item in data[1:]:
-        elements.append(item[0])
-        v = np.array(item[1:], dtype='|S4').astype(np.float)
-        norm=np.linalg.norm(v)
-        norm_vector=list()
-        if(norm==0):
-            norm_vector=[0.0,0.0,0.0]
-        else:
-            norm_vector=np.divide(v,norm).tolist()
-        knowledge_shape_norm_matrix.append(norm_vector)
-    
-    products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
-    
-    worksheet_matching = wks.worksheet("Shape Feature Matching")
-    worksheet_matching.resize(1,len(elements)+1)
-    i=2
-    for element in elements:
-        worksheet_matching.update_cell(1, i, element)
-        i=i+1
-    j=0
-    for product in products:
-        product=np.clip(product,0,product.max())
-        if(sum(product)==0):
-            norm_vector=product
-        else:
-            norm_vector=np.divide(product,sum(product))
-        raw=list()
-        raw.append(objects[j])
-        j+=1
-        for cell in norm_vector:
-            raw.append(cell)
-        worksheet_matching.append_row(raw)
-    app.config['DOMAIN']['geometry']['pagination'] = True
-app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
-
-
-def get_item_modelPairFeature(item):
-    app.config['DOMAIN']['geometry']['pagination'] = False
-    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
-    app.config['DOMAIN']['geometry']['pagination'] = True
-    
-    whole_matrix=list()
-    relations=list()
-    features=list()
-    for entity in entities:
-        entity_id=entity['EntityID']
-        entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
-        GlobalId=entity_info['GlobalId']
-        matrix=entity_info['Matrix']
-        relation=entity_info['Relations']
-        if len(whole_matrix)==0:
-            whole_matrix=matrix
-            relations=relation
-            features=entity_info['Features']
-            print(relations)
-            continue
-        whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
-        relations=np.concatenate((relations,relation),axis=0).tolist()
-        print(relations)
-    print(len(whole_matrix))
-
-    # Knowledge = wks.worksheet("Shape Feature Knowledge")
-    # data=Knowledge.get_all_values()
-    # elements=list()
-    # knowledge_shape_norm_matrix=list()
-    # for item in data[1:]:
-    #     elements.append(item[0])
-    #     v = np.array(item[1:], dtype='|S4').astype(np.float)
-    #     norm=np.linalg.norm(v)
-    #     norm_vector=list()
-    #     if(norm==0):
-    #         norm_vector=[0.0,0.0,0.0]
-    #     else:
-    #         norm_vector=np.divide(v,norm).tolist()
-    #     knowledge_shape_norm_matrix.append(norm_vector)
-    
-    # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
-    
-app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
-
-
-###########################################
-# below are old staff
-###########################################
+#     t_matrix=np.transpose(matrix)
+#     matrix_norm=list()
+#     for v in t_matrix:
+#         norm=np.linalg.norm(v)
+#         norm_vector=list()
+#         if(norm==0):
+#             norm_vector=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+#         else:
+#             norm_vector=np.divide(v,norm).tolist()
+#         matrix_norm.append(norm_vector)
+#     item["Matrix"]=matrix_norm
+#     item["Relations"]=GlobalIds
+#     item['Features']=featurs
+#     item['GlobalId']=my_globalid
+# app.on_fetched_item_entityPairFeatures+=get_item_entityPairFeatures
 
 # ###########################################
-# # deletion, this is not a good idea
+# # model's features
 
-# # delete entity 
-# def delete_entity(item):
-#     geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
-#     for geometry in geometries:
-#         deleteitem_internal('geometry',**{"_id":geometry['_id']})
-#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
-#     features=get_internal('geometryFeature',**{'EntityID': item["_id"]})[0]["_items"]
-#     for feature in features:
-#         deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
-#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
-# def delete_all_entity():
-#     items = get_internal('entity')[0]['_items']
-#     for item in items:
-#         delete_entity(item)
-# app.on_delete_item_entity+=delete_entity
-# app.on_delete_resource_entity+=delete_all_entity
-
-# # delete file 
-# def delete_file(item):
-#     app.config['DOMAIN']['entity']['pagination'] = False
-#     entities=get_internal('entity',**{'FileID': item["_id"]})[0]["_items"]
+# # shape feature of all the elements
+# def get_item_modelShapeFeatures(item):
+#     app.config['DOMAIN']['geometry']['pagination'] = False
+#     entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+#     scope = ['https://spreadsheets.google.com/feeds']
+#     credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
+#     gc = gspread.authorize(credentials)
+#     wks = gc.open("toy bridge of SeeBIM - Feature matching")
+#     fact_shape_norm_matrix=list()
+#     objects=list()
+#     worksheet = wks.worksheet("Shape Feature Fact")
+#     worksheet.resize(1,5)
+#     objects_ids=list()
 #     for entity in entities:
-#         deleteitem_internal('entity',**{"_id":entity['_id']})
-#     app.config['DOMAIN']['entity']['pagination'] = True
-# def delete_all_file():
-#     app.config['DOMAIN']['entity']['pagination'] = False
-#     entities=get_internal('entity')[0]["_items"]
-#     for entity in entities:
-#         deleteitem_internal('entity',**{"_id":entity['_id']})
-#     app.config['DOMAIN']['entity']['pagination'] = True
-# # don't want the web interface to delete too slow
-# app.on_delete_item_file+=delete_file
-# app.on_delete_resource_file+=delete_all_file
-
-# # interaction with entity attributes
-# def get_attribute_value(attributes,attribute_name):
-#     for attribute in attributes:
-#         if attribute['Name']==attribute_name:
-#             return attribute['Value']
-#     print("No such attribute")
-#     return None
-# def set_attribute_value(attributes,attribute_name,value):
-#     for attribute in attributes:
-#         if attribute['Name']==attribute_name:
-#             attribute['Value']=value
-#     return attributes
+#         entity_id=entity['EntityID']
+#         objects_ids.append(entity_id)
+#         entity_info = getitem_internal('entityShapeFeatures',**{"_id":entity_id})[0]
+#         GlobalId=entity_info['GlobalId']
+#         features=entity_info['ShapeFeatures']
+#         data=[features['ParallelBridgeLongitudinal'],features['ParallelBridgeTransverse'],features['Vertical'],features['Convex']]
+#         worksheet.append_row([GlobalId,data[0],data[1],data[2]])
     
-# # entity property set interaction
-# def get_item_property_set(item):
-#     properties=get_attribute_value(item['Attribute'],'HasProperties')
-#     if properties is None:
-#         return
-#     # if the attribute like HasProperties only has 1 node, then it is a str instead of list
-#     if isinstance(properties,str):
-#         properties=[properties]
-#     properties_data=list()
-#     for property in properties:
-#         try:
-#             property_data=getitem_internal('entitySimple',**{"_id":property})
-#             properties_data.append(property_data[0])
-#         except:
-#             print("No such property")
-#     if len(properties_data)>0:
-#         item['Properties']=properties_data
-# def get_property_set(data):
-#     items=data['_items']
-#     for item in items:
-#         get_item_property_set(item)        
-# app.on_fetched_item_entityPropertySet+=get_item_property_set  
-# app.on_fetched_resource_entityPropertySet+=get_property_set
+#         objects.append(GlobalId)
+#         norm=np.linalg.norm(data)   
+#         norm_vector=np.divide(data,norm).tolist() 
+#         fact_shape_norm_matrix.append(norm_vector)
 
-# # reldefined
-# def get_item_rel_property_set(item):
-#     # do we really need try here?
-#     try:
-#         property_set_id=get_attribute_value(item['Attribute'],'RelatingPropertyDefinition')
-#         if property_set_id is not None:
-#             p_set=getitem_internal('entityPropertySet',**{"_id":ObjectId(property_set_id)})[0]
-#             item['PropertySet']=p_set
-#     except:
-#         print("no property set linked in this relation")
-# def get_rel_property_set(data):
-#     items=data['_items']
-#     for item in items:
-#         get_item_rel_property_set(item)  
-# app.on_fetched_item_entityRelProperties+=get_item_rel_property_set
-# app.on_fetched_resource_entityRelProperties+=get_rel_property_set
+#     Knowledge = wks.worksheet("Shape Feature Knowledge")
+#     data=Knowledge.get_all_values()
+#     elements=list()
+#     knowledge_shape_norm_matrix=list()
+#     for item in data[1:]:
+#         elements.append(item[0])
+#         v = np.array(item[1:], dtype='|S4').astype(np.float)
+#         norm=np.linalg.norm(v)
+#         norm_vector=list()
+#         if(norm==0):
+#             norm_vector=[0.0,0.0,0.0]
+#         else:
+#             norm_vector=np.divide(v,norm).tolist()
+#         knowledge_shape_norm_matrix.append(norm_vector)
+    
+#     products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    
+#     worksheet_matching = wks.worksheet("Shape Feature Matching")
+#     worksheet_matching.resize(1,len(elements)+1)
+#     i=2
+#     for element in elements:
+#         worksheet_matching.update_cell(1, i, element)
+#         i=i+1
+#     j=0
+#     for product in products:
+#         product=np.clip(product,0,product.max())
+#         if(sum(product)==0):
+#             norm_vector=product
+#         else:
+#             norm_vector=np.divide(product,sum(product))
+#         raw=list()
+#         raw.append(objects[j])
+#         j+=1
+#         for cell in norm_vector:
+#             raw.append(cell)
+#         worksheet_matching.append_row(raw)
+#     app.config['DOMAIN']['geometry']['pagination'] = True
+# app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 
-# # entity with property set interaction
-# # you can only query specific entity item
-# def get_item_with_property(item):
-#     rels = get_internal('entityRelProperties',**{"Attribute": {"$elemMatch":{"Value": str(item['_id']),"Name": "RelatedObjects"}}})[0]['_items']
-#     if len(rels)>0:
-#         item['PropertyDefinition']=rels
-#     shape_feature = getitem_internal('geometryWithFeature',**{"EntityID":item["_id"]})[0]
-#     item['Geometry']=shape_feature['Geometry']
+
+# def get_item_modelPairFeature(item):
+#     app.config['DOMAIN']['geometry']['pagination'] = False
+#     entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+#     app.config['DOMAIN']['geometry']['pagination'] = True
+    
+#     whole_matrix=list()
+#     relations=list()
 #     features=list()
-#     for feature in shape_feature['Features']:
-#         features.append(feature)
-#     item['Features']=features
-# def get_resource_with_property(data):
-#     items=data['_items']
-#     for item in items:
-#         get_item_with_property(item)  
-# app.on_fetched_item_entityWithProperty+=get_item_with_property
-# app.on_fetched_resource_entityWithProperty+=get_resource_with_property
+#     for entity in entities:
+#         entity_id=entity['EntityID']
+#         entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
+#         GlobalId=entity_info['GlobalId']
+#         matrix=entity_info['Matrix']
+#         relation=entity_info['Relations']
+#         if len(whole_matrix)==0:
+#             whole_matrix=matrix
+#             relations=relation
+#             features=entity_info['Features']
+#             print(relations)
+#             continue
+#         whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
+#         relations=np.concatenate((relations,relation),axis=0).tolist()
+#         print(relations)
+#     print(len(whole_matrix))
 
-# # shape and feature
-# def get_item_shape_with_feature(item):
-#     features = get_internal('geometryFeature',**{"GeometryID":item["_id"]})[0]['_items']
-#     if len(features)>0:
-#         item['Features']=list()
-#         for feature in features:
-#             item['Features'].append(feature['Feature'])
-#     else:
-#         item['Features']=list()
-#         mesh=Geom(item['Geometry'])
-#         payload=list()
-#         obb_features=mesh.getOBB()
-#         shape_features=mesh.getMeshFeature()
-#         data=dict()
-#         for obb_feature in obb_features:
-#             payload.append({
-#                 'FileID':str(item['FileID']),
-#                 'GlobalId':str(item['GlobalId']),
-#                 'EntityID':str(item['EntityID']),
-#                 'GeometryID':str(item['_id']),
-#                 'Feature':obb_feature
-#             })
-#             item['Features'].append(obb_feature)
-#         for shape_feature in shape_features:
-#             payload.append({
-#                 'FileID':str(item['FileID']),
-#                 'GlobalId':str(item['GlobalId']),
-#                 'EntityID':str(item['EntityID']),
-#                 'GeometryID':str(item['_id']),
-#                 'Feature':shape_feature
-#             })
-#             item['Features'].append(shape_feature)
-#         post_internal('geometryFeature',payload,skip_validation=True)
-# def get_resource_shape_with_feature(data):
-#     items=data['_items']
-#     for item in items:
-#         get_item_shape_with_feature(item)  
-# def delete_geometry(item):
-#     while 1:
-#         features=get_internal('geometryFeature',**{'GeometryID': item["_id"]})[0]["_items"]
-#         if len(features)<1:
-#             break
-#         for feature in features:
-#             deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
-
-# def delete_all_geometry():
-#     items = get_internal('geometry')[0]['_items']
-#     for item in items:
-#         delete_geometry(item)
-# app.on_fetched_item_geometryWithFeature+=get_item_shape_with_feature
-# app.on_fetched_resource_geometryWithFeature+=get_resource_shape_with_feature
-
-# app.on_delete_item_geometry+=delete_geometry
-# app.on_delete_resource_geometry+=delete_all_geometry
-
-# def getFeature(item,feature_name):
-#     features=item['Features']
-#     for feature in features:
-#         if feature['Name']==feature_name:
-#             return feature['Value']
-#     return None
+#     # Knowledge = wks.worksheet("Shape Feature Knowledge")
+#     # data=Knowledge.get_all_values()
+#     # elements=list()
+#     # knowledge_shape_norm_matrix=list()
+#     # for item in data[1:]:
+#     #     elements.append(item[0])
+#     #     v = np.array(item[1:], dtype='|S4').astype(np.float)
+#     #     norm=np.linalg.norm(v)
+#     #     norm_vector=list()
+#     #     if(norm==0):
+#     #         norm_vector=[0.0,0.0,0.0]
+#     #     else:
+#     #         norm_vector=np.divide(v,norm).tolist()
+#     #     knowledge_shape_norm_matrix.append(norm_vector)
     
-# # Bug: cannot fetch these extra items, even not print 
-# # def get_item_feature_entity(item):
-# #     print("ol1")
-# #     entity = getitem_internal('entityWithProperty',**{"_id":item["EntityID"]})[0]
-# #     print(entity)
-# #     item['Entity']=entity
-# # def get_source_feature_entity(data):
-# #     print("data")
-# #     items=data['_items']
-# #     print("ol")
+#     # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    
+# app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
+
+
+# ###########################################
+# # below are old staff
+# ###########################################
+
+# # ###########################################
+# # # deletion, this is not a good idea
+
+# # # delete entity 
+# # def delete_entity(item):
+# #     geometries=get_internal('geometry',**{'EntityID': item["_id"]})[0]["_items"]
+# #     for geometry in geometries:
+# #         deleteitem_internal('geometry',**{"_id":geometry['_id']})
+# #     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+# #     features=get_internal('geometryFeature',**{'EntityID': item["_id"]})[0]["_items"]
+# #     for feature in features:
+# #         deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
+# #     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# # def delete_all_entity():
+# #     items = get_internal('entity')[0]['_items']
 # #     for item in items:
-# #         get_item_feature_entity(item)  
-# # app.on_fetched_item_geometryFeature+=get_item_feature_entity
-# # app.on_fetched_source_geometryFeature+=get_source_feature_entity
+# #         delete_entity(item)
+# # app.on_delete_item_entity+=delete_entity
+# # app.on_delete_resource_entity+=delete_all_entity
 
-# # query
-# def get_item_query(item):
-#     query=dict()
-#     query["$and"]=list()
-#     query['$and'].append({
-#         "FileID":str(item["FileID"])
-#     })
-#     for clause in item['Clauses']:
-#         query['$and'].append({
-#             clause['Field']:{
-#                 clause['Operator']:clause['Value']
-#             }
-#         })
-#     shape_features = get_internal('geometryFeature',**query)[0]['_items']
-#     item['Data']=list()
-#     for feature in shape_features:
-#         item['Data'].append({
-#             "EntityID":feature['EntityID'],
-#             "GlobalId":feature['GlobalId'],
-#         })
-# # def get_source_query(data):
+# # # delete file 
+# # def delete_file(item):
+# #     app.config['DOMAIN']['entity']['pagination'] = False
+# #     entities=get_internal('entity',**{'FileID': item["_id"]})[0]["_items"]
+# #     for entity in entities:
+# #         deleteitem_internal('entity',**{"_id":entity['_id']})
+# #     app.config['DOMAIN']['entity']['pagination'] = True
+# # def delete_all_file():
+# #     app.config['DOMAIN']['entity']['pagination'] = False
+# #     entities=get_internal('entity')[0]["_items"]
+# #     for entity in entities:
+# #         deleteitem_internal('entity',**{"_id":entity['_id']})
+# #     app.config['DOMAIN']['entity']['pagination'] = True
+# # # don't want the web interface to delete too slow
+# # app.on_delete_item_file+=delete_file
+# # app.on_delete_resource_file+=delete_all_file
+
+# # # interaction with entity attributes
+# # def get_attribute_value(attributes,attribute_name):
+# #     for attribute in attributes:
+# #         if attribute['Name']==attribute_name:
+# #             return attribute['Value']
+# #     print("No such attribute")
+# #     return None
+# # def set_attribute_value(attributes,attribute_name,value):
+# #     for attribute in attributes:
+# #         if attribute['Name']==attribute_name:
+# #             attribute['Value']=value
+# #     return attributes
+    
+# # # entity property set interaction
+# # def get_item_property_set(item):
+# #     properties=get_attribute_value(item['Attribute'],'HasProperties')
+# #     if properties is None:
+# #         return
+# #     # if the attribute like HasProperties only has 1 node, then it is a str instead of list
+# #     if isinstance(properties,str):
+# #         properties=[properties]
+# #     properties_data=list()
+# #     for property in properties:
+# #         try:
+# #             property_data=getitem_internal('entitySimple',**{"_id":property})
+# #             properties_data.append(property_data[0])
+# #         except:
+# #             print("No such property")
+# #     if len(properties_data)>0:
+# #         item['Properties']=properties_data
+# # def get_property_set(data):
 # #     items=data['_items']
 # #     for item in items:
-# #         get_item_query(item)  
-# app.on_fetched_item_query+=get_item_query
-# # app.on_fetched_source_query+=get_source_query
+# #         get_item_property_set(item)        
+# # app.on_fetched_item_entityPropertySet+=get_item_property_set  
+# # app.on_fetched_resource_entityPropertySet+=get_property_set
+
+# # # reldefined
+# # def get_item_rel_property_set(item):
+# #     # do we really need try here?
+# #     try:
+# #         property_set_id=get_attribute_value(item['Attribute'],'RelatingPropertyDefinition')
+# #         if property_set_id is not None:
+# #             p_set=getitem_internal('entityPropertySet',**{"_id":ObjectId(property_set_id)})[0]
+# #             item['PropertySet']=p_set
+# #     except:
+# #         print("no property set linked in this relation")
+# # def get_rel_property_set(data):
+# #     items=data['_items']
+# #     for item in items:
+# #         get_item_rel_property_set(item)  
+# # app.on_fetched_item_entityRelProperties+=get_item_rel_property_set
+# # app.on_fetched_resource_entityRelProperties+=get_rel_property_set
+
+# # # entity with property set interaction
+# # # you can only query specific entity item
+# # def get_item_with_property(item):
+# #     rels = get_internal('entityRelProperties',**{"Attribute": {"$elemMatch":{"Value": str(item['_id']),"Name": "RelatedObjects"}}})[0]['_items']
+# #     if len(rels)>0:
+# #         item['PropertyDefinition']=rels
+# #     shape_feature = getitem_internal('geometryWithFeature',**{"EntityID":item["_id"]})[0]
+# #     item['Geometry']=shape_feature['Geometry']
+# #     features=list()
+# #     for feature in shape_feature['Features']:
+# #         features.append(feature)
+# #     item['Features']=features
+# # def get_resource_with_property(data):
+# #     items=data['_items']
+# #     for item in items:
+# #         get_item_with_property(item)  
+# # app.on_fetched_item_entityWithProperty+=get_item_with_property
+# # app.on_fetched_resource_entityWithProperty+=get_resource_with_property
+
+# # # shape and feature
+# # def get_item_shape_with_feature(item):
+# #     features = get_internal('geometryFeature',**{"GeometryID":item["_id"]})[0]['_items']
+# #     if len(features)>0:
+# #         item['Features']=list()
+# #         for feature in features:
+# #             item['Features'].append(feature['Feature'])
+# #     else:
+# #         item['Features']=list()
+# #         mesh=Geom(item['Geometry'])
+# #         payload=list()
+# #         obb_features=mesh.getOBB()
+# #         shape_features=mesh.getMeshFeature()
+# #         data=dict()
+# #         for obb_feature in obb_features:
+# #             payload.append({
+# #                 'FileID':str(item['FileID']),
+# #                 'GlobalId':str(item['GlobalId']),
+# #                 'EntityID':str(item['EntityID']),
+# #                 'GeometryID':str(item['_id']),
+# #                 'Feature':obb_feature
+# #             })
+# #             item['Features'].append(obb_feature)
+# #         for shape_feature in shape_features:
+# #             payload.append({
+# #                 'FileID':str(item['FileID']),
+# #                 'GlobalId':str(item['GlobalId']),
+# #                 'EntityID':str(item['EntityID']),
+# #                 'GeometryID':str(item['_id']),
+# #                 'Feature':shape_feature
+# #             })
+# #             item['Features'].append(shape_feature)
+# #         post_internal('geometryFeature',payload,skip_validation=True)
+# # def get_resource_shape_with_feature(data):
+# #     items=data['_items']
+# #     for item in items:
+# #         get_item_shape_with_feature(item)  
+# # def delete_geometry(item):
+# #     while 1:
+# #         features=get_internal('geometryFeature',**{'GeometryID': item["_id"]})[0]["_items"]
+# #         if len(features)<1:
+# #             break
+# #         for feature in features:
+# #             deleteitem_internal('geometryFeature',**{"_id":feature['_id']})
+
+# # def delete_all_geometry():
+# #     items = get_internal('geometry')[0]['_items']
+# #     for item in items:
+# #         delete_geometry(item)
+# # app.on_fetched_item_geometryWithFeature+=get_item_shape_with_feature
+# # app.on_fetched_resource_geometryWithFeature+=get_resource_shape_with_feature
+
+# # app.on_delete_item_geometry+=delete_geometry
+# # app.on_delete_resource_geometry+=delete_all_geometry
+
+# # def getFeature(item,feature_name):
+# #     features=item['Features']
+# #     for feature in features:
+# #         if feature['Name']==feature_name:
+# #             return feature['Value']
+# #     return None
+    
+# # # Bug: cannot fetch these extra items, even not print 
+# # # def get_item_feature_entity(item):
+# # #     print("ol1")
+# # #     entity = getitem_internal('entityWithProperty',**{"_id":item["EntityID"]})[0]
+# # #     print(entity)
+# # #     item['Entity']=entity
+# # # def get_source_feature_entity(data):
+# # #     print("data")
+# # #     items=data['_items']
+# # #     print("ol")
+# # #     for item in items:
+# # #         get_item_feature_entity(item)  
+# # # app.on_fetched_item_geometryFeature+=get_item_feature_entity
+# # # app.on_fetched_source_geometryFeature+=get_source_feature_entity
+
+# # # query
+# # def get_item_query(item):
+# #     query=dict()
+# #     query["$and"]=list()
+# #     query['$and'].append({
+# #         "FileID":str(item["FileID"])
+# #     })
+# #     for clause in item['Clauses']:
+# #         query['$and'].append({
+# #             clause['Field']:{
+# #                 clause['Operator']:clause['Value']
+# #             }
+# #         })
+# #     shape_features = get_internal('geometryFeature',**query)[0]['_items']
+# #     item['Data']=list()
+# #     for feature in shape_features:
+# #         item['Data'].append({
+# #             "EntityID":feature['EntityID'],
+# #             "GlobalId":feature['GlobalId'],
+# #         })
+# # # def get_source_query(data):
+# # #     items=data['_items']
+# # #     for item in items:
+# # #         get_item_query(item)  
+# # app.on_fetched_item_query+=get_item_query
+# # # app.on_fetched_source_query+=get_source_query
 
 
-# def get_token_item(item):
-#     para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
-#     headers={"Content-Type":"application/json"}
-#     r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
-#     item['token']=r.json()['token']
-# def get_token(items):
-#     for item in items['_items']:
-#         get_token_item(item)
-# app.on_fetched_item_trimbleToken+=get_token_item
-# app.on_fetched_resource_trimbleToken+=get_token
+# # def get_token_item(item):
+# #     para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
+# #     headers={"Content-Type":"application/json"}
+# #     r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
+# #     item['token']=r.json()['token']
+# # def get_token(items):
+# #     for item in items['_items']:
+# #         get_token_item(item)
+# # app.on_fetched_item_trimbleToken+=get_token_item
+# # app.on_fetched_resource_trimbleToken+=get_token
+
+# # old pairwise features
+# # touching or collision
+# def get_item_connected(item):
+#     my_geometry = getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['Geometry']
+#     my_mesh=Geom(my_geometry).mesh
+#     my_bound=my_mesh.bounds.reshape(1,6)[0]
+#     my_tree=my_mesh.triangles_tree()
+    
+#     app.config['DOMAIN']['geometry']['pagination'] = False
+#     geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     compare=list()
+#     for geometry in geometries:
+#         mesh=Geom(geometry['Geometry']).mesh
+#         # bound=mesh.bounds.reshape(1,6)[0]
+#         bound=mesh.bounds
+#         bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
+#         potential_triangle_indices=list(my_tree.intersection(bound))
+#         if len(potential_triangle_indices)>0:
+#             # my_potential_points=my_mesh.triangles[potential_triangle_indices].reshape(1,len(potential_triangle_indices)*3,3)[0]
+#             # checking_results=trimesh.ray.ray_mesh.contains_points(mesh,my_potential_points)
+#             # if True in checking_results:
+#             #     compare.append({
+#             #         'EntityID':geometry['EntityID'],
+#             #         'GlobalId':geometry['GlobalId'],
+#             #         'Compare':1
+#             #     })
+#             #     continue
+#             compare.append({
+#                 'EntityID':geometry['EntityID'],
+#                 'GlobalId':geometry['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':geometry['EntityID'],
+#                 'GlobalId':geometry['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Connect',
+#         'Description':'either touching or collision',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometry']['pagination'] = True
+# app.on_fetched_item_connect+=get_item_connected
+
+# # parallel extrusion
+# threshhold_degree=5
+# def get_item_parallel_extrusion(item):
+#     my_axis = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]['Feature']['Value']
+    
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     extrusions = get_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     compare=list()
+#     for extrusion in extrusions:
+#         axis=extrusion['Feature']['Value']
+#         # the angle in degree
+#         import math
+#         absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,axis))))
+#         # if the angle is lowere than 5
+#         if absolute_angle<threshhold_degree:
+#             compare.append({
+#                 'EntityID':extrusion['EntityID'],
+#                 'GlobalId':extrusion['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':extrusion['EntityID'],
+#                 'GlobalId':extrusion['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Parallel',
+#         'Description':'we are in parallel',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_paraExtrusion+=get_item_parallel_extrusion
+
+# # higher centroid
+# def get_item_higherCentroid(item):
+#     level = getitem_internal('geometryFeature',**{"Feature.Name":"OBBCentroid","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     # file_id=str(item["FileID"])
+#     file_id=item["FileID"]
+#     compare={'Type':'Volume',
+#         'Description':'I\'m higher than them',
+#         'Vector':[]
+#     }
+#     query_greater={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value.Z":{"$gt":level}}]}
+#     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+#     for entity in greater_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':-1
+#         })
+#     query_smaller={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"OBBCentroid"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value.Z":{"$lte":level}}]}
+#     smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+#     for entity in smaller_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':1
+#         })
+#     if len(compare['Vector'])>0:
+#         item['Compare']=compare
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_higherCentroid+=get_item_higherCentroid
+
+# # higher centroid
+# def get_item_lowerBottom(item):
+#     level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     # file_id=str(item["FileID"])
+#     file_id=item["FileID"]
+#     compare={'Type':'Volume',
+#         'Description':'I\'m lower than them',
+#         'Vector':[]
+#     }
+#     query_greater={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"Min"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value.Z":{"$gt":level}}]}
+#     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+#     for entity in greater_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':1
+#         })
+#     query_smaller={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"Min"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value.Z":{"$lte":level}}]}
+#     smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+#     for entity in smaller_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':-1
+#         })
+#     if len(compare['Vector'])>0:
+#         item['Compare']=compare
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_lowerBottom+=get_item_lowerBottom
+
+# # longger extrusion
+# def get_item_longgerExtrusion(item):
+#     extrusion = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrusionLength","EntityID":item["_id"]})[0]['Feature']['Value']
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     # file_id=str(item["FileID"])
+#     file_id=item["FileID"]
+#     compare={'Type':'Volume',
+#         'Description':'I\'m longger than them',
+#         'Vector':[]
+#     }
+#     query_greater={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value":{"$gt":extrusion}}]}
+#     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+#     for entity in greater_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':-1
+#         })
+#     query_smaller={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"ExtrusionLength"},{"EntityID":{'$ne':item["_id"]}},
+#         {"Feature.Value":{"$lte":extrusion}}]}
+#     smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+#     for entity in smaller_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':1
+#         })
+#     if len(compare['Vector'])>0:
+#         item['Compare']=compare
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_longgerExtrusion+=get_item_longgerExtrusion
+
+# # parallel extrusion
+# threshhold_degree=5
+# bridge_longitudinal=[1,0,0]
+# def get_item_parallelBridge(item):
+#     my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
+#     my_axis=my_feature['Feature']['Value']
+#     import math
+#     absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,bridge_longitudinal))))
+#         # if the angle is lowere than 5
+#     if absolute_angle<threshhold_degree:
+#         compare=1
+#     else:
+#         compare=-1
+#     item['Compare']={
+#         'Type':'Parallel',
+#         'Description':'we are in parallel',
+#         'Vector':[{
+#             'EntityID':item['_id'],
+#             'GlobalId':my_feature['GlobalId'],
+#             'Compare':compare
+#         }]
+#     }
+# app.on_fetched_item_parallelBridge+=get_item_parallelBridge
+
+# # compare volume
+# def get_item_volumeBigger(item):
+#     volume = getitem_internal('geometryFeature',**{"Feature.Name":"Volume","EntityID":item["_id"]})[0]['Feature']['Value']
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     # file_id=str(item["FileID"])
+#     file_id=item["FileID"]
+#     compare={'Type':'Volume',
+#         'Description':'My Volume is greater than theirs',
+#         'Vector':[]
+#     }
+#     query_greater={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"Volume"},
+#         {"Feature.Value":{"$gt":volume}},{"EntityID":{'$ne':item["_id"]}}]}
+#     greater_entities=get_internal('geometryFeature',**query_greater)[0]['_items']
+#     for entity in greater_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':-1
+#         })
+#     query_smaller={"$and": [
+#         {"FileID":file_id},
+#         {"Feature.Name":"Volume"},
+#         {"Feature.Value":{"$lte":volume}},{"EntityID":{'$ne':item["_id"]}}]}
+#     smaller_entities=get_internal('geometryFeature',**query_smaller)[0]['_items']
+#     for entity in smaller_entities:
+#         compare['Vector'].append({
+#             'EntityID':entity['EntityID'],
+#             'GlobalId':entity['GlobalId'],
+#             'Compare':1
+#         })
+#     if len(compare['Vector'])>0:
+#         item['Compare']=compare
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_volumeBigger+=get_item_volumeBigger
+
+# # complete above
+# def get_item_completeAbove(item):
+#     lowest_level = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     features = get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     compare=list()
+#     for feature in features:
+#         max_level=feature['Feature']['Value']['Z']
+#         if lowest_level>max_level or np.isclose(lowest_level,max_level,atol=1e-1):
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Completely above',
+#         'Description':'I\'m completely above them',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_completeAbove+=get_item_completeAbove
+
+# # closer to bridge's Longitudinal axis
+# bridge_longitudinal_axis='X'
+# bridge_transverse_axis='Y'
+# def bridgeCentroid(fileID):
+#     mins=get_internal('geometryFeature',**{"Feature.Name":"Min","FileID":fileID})[0]['_items']
+#     model_min=dict()
+#     for min in mins:
+#         if not model_min:
+#             model_min['X']=min['Feature']['Value']['X']
+#             model_min['Y']=min['Feature']['Value']['Y']
+#             model_min['Z']=min['Feature']['Value']['Z']
+#             continue
+#         if model_min['X']>min['Feature']['Value']['X']:
+#             model_min['X']=min['Feature']['Value']['X']
+#         if model_min['Y']>min['Feature']['Value']['Y']:
+#             model_min['Y']=min['Feature']['Value']['Y']
+#         if model_min['Z']>min['Feature']['Value']['Z']:
+#             model_min['Z']=min['Feature']['Value']['Z']
+#     maxs=get_internal('geometryFeature',**{"Feature.Name":"Max","FileID":fileID})[0]['_items']
+#     model_max=dict()
+#     for max in maxs:
+#         if not model_max:
+#             model_max['X']=max['Feature']['Value']['X']
+#             model_max['Y']=max['Feature']['Value']['Y']
+#             model_max['Z']=max['Feature']['Value']['Z']
+#             continue
+#         if model_max['X']<max['Feature']['Value']['X']:
+#             model_max['X']=max['Feature']['Value']['X']
+#         if model_max['Y']<max['Feature']['Value']['Y']:
+#             model_max['Y']=max['Feature']['Value']['Y']
+#         if model_max['Z']<max['Feature']['Value']['Z']:
+#             model_max['Z']=max['Feature']['Value']['Z']
+#     return {
+#         'X':(model_max['X']+model_min['X'])/2,
+#         'Y':(model_max['Y']+model_min['Y'])/2,
+#         'Z':(model_max['Z']+model_min['Z'])/2,
+#     }
+    
+#     # geometries=get_internal('geometry',**{"FileID":fileID})[0]['_items']
+#     # data=dict()
+#     # v_len=0
+#     # for geometry in geometries:
+#     #     v_array=geometry['Geometry']['Vertices']
+#     #     f_array=geometry['Geometry']['Faces']
+#     #     np.add(f_array,v_len)
+#     #     n_array=geometry['Geometry']['Normals']
+#     #     if not data:
+#     #         data['Vertices']=v_array
+#     #         data['Faces']=f_array
+#     #         data['Normals']=n_array
+#     #     else:
+#     #         data['Vertices']=np.concatenate((data['Vertices'],v_array),axis=0).tolist()
+#     #         data['Faces']=np.concatenate((data['Faces'],f_array),axis=0).tolist()
+#     #         data['Normals']=np.concatenate((data['Normals'],n_array),axis=0).tolist()
+#     #     v_len=len(v_array)
+#     # # ceontroid=np.mean(data['Vertices'],axis=0).tolist()
+#     # model=Geom(data)
+#     # ceontroid=np.mean(model.mesh.bounds,axis=0).tolist()
+#     # # ceontroid=model.mesh.centroid.tolist()
+#     # return {
+#     #     'X':ceontroid[0],
+#     #     'Y':ceontroid[1],
+#     #     'Z':ceontroid[2]
+#     # }
+    
+    
+# def get_item_closerTransverseCoordinate(item):
+#     my_t_c = getitem_internal('geometryFeature',**{"Feature.Name":"Centroid","EntityID":item["_id"]})[0]['Feature']['Value'][bridge_transverse_axis]
+#     bridge_centroid=bridgeCentroid(item['FileID'])
+#     b_t_c=bridge_centroid[bridge_transverse_axis]
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     features = get_internal('geometryFeature',**{"Feature.Name":"Centroid","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     compare=list()
+#     for feature in features:
+#         t_c=feature['Feature']['Value'][bridge_transverse_axis]
+#         if abs(my_t_c-b_t_c)<=abs(t_c-b_t_c):
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Completely above',
+#         'Description':'I\'m closer to bridge\'s Longitudinal axis',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# def get_item_closerLongitudinalCoordinate(item):
+#     my_centroid = getitem_internal('geometryFeature',**{"Feature.Name":"Centroid","EntityID":item["_id"]})[0]['Feature']['Value']
+#     my_t_c=my_centroid[bridge_longitudinal_axis]
+#     bridge_centroid=bridgeCentroid(item['FileID'])
+#     b_t_c=bridge_centroid[bridge_longitudinal_axis]
+#     # to make sure we can retrieve all the documents
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = False
+#     features = get_internal('geometryFeature',**{"Feature.Name":"Centroid","FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
+#     compare=list()
+#     for feature in features:
+#         t_c=feature['Feature']['Value'][bridge_longitudinal_axis]
+#         if abs(my_t_c-b_t_c)<=abs(t_c-b_t_c):
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':feature['EntityID'],
+#                 'GlobalId':feature['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Completely above',
+#         'Description':'I\'m closer to bridge\'s Longitudinal axis',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometryFeature']['pagination'] = True
+# app.on_fetched_item_closerTran+=get_item_closerLongitudinalCoordinate
+# app.on_fetched_item_closerLongi+=get_item_closerTransverseCoordinate
+
+# # parallel bridge's transverse direction
+# threshhold_degree=5
+# bridge_transverse=[0,1,0]
+# def get_item_paraBriTrans(item):
+#     my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
+#     my_axis=my_feature['Feature']['Value']
+#     import math
+#     absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,bridge_transverse))))
+#         # if the angle is lowere than 5
+#     if absolute_angle<threshhold_degree:
+#         compare=1
+#     else:
+#         compare=-1
+#     item['Compare']={
+#         'Type':'Parallel',
+#         'Description':'we are in parallel',
+#         'Vector':[{
+#             'EntityID':item['_id'],
+#             'GlobalId':my_feature['GlobalId'],
+#             'Compare':compare
+#         }]
+#     }
+# app.on_fetched_item_paraBriTrans+=get_item_paraBriTrans
+
+# # parallel z
+# threshhold_degree=5
+# Z=[0,0,1]
+# def get_item_Vertical(item):
+#     my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"ExtrudedAxis","EntityID":item["_id"]})[0]
+#     my_axis=my_feature['Feature']['Value']
+#     import math
+#     absolute_angle=math.degrees(math.acos(abs(np.dot(my_axis,Z))))
+#         # if the angle is lowere than 5
+#     if absolute_angle<threshhold_degree:
+#         compare=1
+#     else:
+#         compare=-1
+#     item['Compare']={
+#         'Type':'Parallel',
+#         'Description':'I\'m vertical',
+#         'Vector':[{
+#             'EntityID':item['_id'],
+#             'GlobalId':my_feature['GlobalId'],
+#             'Compare':compare
+#         }]
+#     }
+# app.on_fetched_item_Vertical+=get_item_Vertical
+
+# # overlap in z [0,0,1]
+# def get_item_overlapZ(item):
+#     my_min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+#     my_max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":item["_id"]})[0]['Feature']['Value']['Z']
+#     app.config['DOMAIN']['geometry']['pagination'] = False
+#     geometries = get_internal('geometry',**{"FileID":item["FileID"]})[0]['_items']
+#     compare=list()
+#     for geometry in geometries:
+#         min = getitem_internal('geometryFeature',**{"Feature.Name":"Min","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
+#         max = getitem_internal('geometryFeature',**{"Feature.Name":"Max","EntityID":geometry["EntityID"]})[0]['Feature']['Value']['Z']
+#         if my_min<max and my_max>min:
+#             compare.append({
+#                 'EntityID':geometry['EntityID'],
+#                 'GlobalId':geometry['GlobalId'],
+#                 'Compare':1
+#             })
+#         else:
+#             compare.append({
+#                 'EntityID':geometry['EntityID'],
+#                 'GlobalId':geometry['GlobalId'],
+#                 'Compare':-1
+#             })
+#     item['Compare']={
+#         'Type':'Completely above',
+#         'Description':'I overlap with them in z',
+#         'Vector':compare
+#     }
+#     app.config['DOMAIN']['geometry']['pagination'] = True
+# app.on_fetched_item_overlapZ+=get_item_overlapZ
+
+# # convex
+# def get_item_convex(item):
+#     my_feature = getitem_internal('geometryFeature',**{"Feature.Name":"IsConvex","EntityID":item["_id"]})[0]
+#     convex=my_feature['Feature']['Value']
+#     if convex:
+#         compare=1
+#     else:
+#         compare=-1
+#     item['Compare']={
+#         'Type':'Convex',
+#         'Description':'I\'m convex',
+#         'Vector':[{
+#             'EntityID':item['_id'],
+#             'GlobalId':my_feature['GlobalId'],
+#             'Compare':compare
+#         }]
+#     }
+# app.on_fetched_item_convex+=get_item_convex
 
 if __name__ == '__main__':
     # app.run()
