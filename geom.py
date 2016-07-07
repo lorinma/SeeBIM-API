@@ -6,6 +6,10 @@ import numpy as np
 
 class Geom:
     extruded_axis=list()
+    centroid=list()
+    max=list()
+    min=list()
+    length=float()
     def __init__(self,data=None):
         if data == None:
             self.mesh=None
@@ -29,6 +33,7 @@ class Geom:
         box=self.mesh.bounding_box_oriented
         ext = box.extents.tolist()
         centroid = box.centroid.tolist()
+        self.centroid=centroid
         axis=np.transpose(np.array(box.box_transform)[0:3,0:3]).tolist()
         # update the ext in local
         ext = np.absolute(np.dot(axis,ext))
@@ -66,25 +71,35 @@ class Geom:
                 },
             },
         ]
-        greatest_value=0
-        axis='X'
-        extent=data[1]['Value']
         obb_axis=data[3]['Value']
-        for key in extent:
-            if greatest_value<extent[key]:
-                axis=key
-                greatest_value=extent[key]
-        self.extruded_axis=obb_axis[axis]
+        # for bearing exception, no more than 600 wide or long
+        if np.linalg.norm(np.clip(ext,600,10000000000)-600)==0:
+            extruded_axis=[0,0,1]
+            length=sorted(ext)[0]
+            self.extruded_axis=extruded_axis
+            self.length=length
+        else:
+            length=0
+            axis='X'
+            extent=data[1]['Value']
+            for key in extent:
+                if length<extent[key]:
+                    axis=key
+                    length=extent[key]
+            extruded_axis=obb_axis[axis]
+            self.extruded_axis=extruded_axis
+            self.length=length
         data.append({
             'Name':'ExtrudedAxis',
             'Description':'the major axis with greatest dimension',
-            'Value':self.extruded_axis,
+            'Value':extruded_axis,
             })
         data.append({
             'Name':'ExtrusionLength',
             'Description':'the greatest dimension',
-            'Value':greatest_value,
+            'Value':length,
             })
+        
         return data
     
     # get other shape features
@@ -92,6 +107,8 @@ class Geom:
         if self.mesh is None:
             print("mesh is not loaded")
             return None
+        self.min=self.mesh.bounds[0]
+        self.max=self.mesh.bounds[1]
         data=[
             {
             'Name':'Centroid',

@@ -158,6 +158,24 @@ def parallelChecking(my_mesh, mesh):
     else:
         return -1
         
+def higherCentroid(my_mesh, mesh):
+    if my_mesh.centroid[2]>mesh.centroid[2]:
+        return 1
+    else:
+        return -1
+        
+def lowerBottom(my_mesh, mesh):
+    if my_mesh.min[2]<mesh.min[2]:
+        return 1
+    else:
+        return -1
+        
+def longgerExtrusion(my_mesh, mesh):
+    if my_mesh.length>mesh.length:
+        return 1
+    else:
+        return -1
+        
 # add geometry and related features
 def add_geometry(items):
     meshes=list()
@@ -198,6 +216,13 @@ def add_geometry(items):
         
         connect_vector=list()
         para_vector=list()
+        centorid_vector=list()
+        bottom_vector=list()
+        longger_vector=list()
+        # centorid_vector=list()
+        # centorid_vector=list()
+        # centorid_vector=list()
+        # centorid_vector=list()
         for j in range(len(entityIds)):
             your_globalId=globalIds[j]
             if my_globalId==your_globalId:
@@ -207,8 +232,21 @@ def add_geometry(items):
 
             connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
             para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
+            centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
+            bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
+            longger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':longgerExtrusion(my_mesh,your_mesh)})
+            # para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
+            # centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
+            # bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
+            
         pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
         pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
+        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
+        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
+        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':longger_vector}})
+        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
+        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
+        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
     post_internal('pairwiseFeature',pair_payload,skip_validation=True)
 app.on_insert_geometry+=add_geometry
 
