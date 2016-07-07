@@ -385,183 +385,183 @@ entity_withGeometryFeature_resource={
     'schema': entity_schema
 }
 
-# either touching or collision
-entity_connect_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'connected',
-    'schema': entity_schema
-}
-entity_parallel_extrusion_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'paraExtrusion',
-    'schema': entity_schema
-}
-entity_higher_centroid_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'higherCentroid',
-    'schema': entity_schema
-}
-entity_lower_bottom_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'lowerBottom',
-    'schema': entity_schema
-}
-entity_longger_extrusion_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'longgerExtrusion',
-    'schema': entity_schema
-}
-entity_parallel_bridge_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'parallelBridge',
-    'schema': entity_schema
-}
-entity_bigger_volume_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'volumeBigger',
-    'schema': entity_schema
-}
-entity_complete_above_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'completeAbove',
-    'schema': entity_schema
-}
-entity_closer_transverse_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'closerTansverse',
-    'schema': entity_schema
-}
-entity_closer_longitudinal_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'closerLongi',
-    'schema': entity_schema
-}
-entity_parallel_bridge_transverse_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'parallelBridgeTransverse',
-    'schema': entity_schema
-}
-entity_vertical_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'Vertical',
-    'schema': entity_schema
-}
-entity_overlap_z_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'overlapZ',
-    'schema': entity_schema
-}
-entity_convex_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'convex',
-    'schema': entity_schema
-}
-entity_shape_features_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'shapeFeatures',
-    'schema': entity_schema
-}
-entity_pairwise_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'FileID': 1,
-            'GlobalId': 1,
-        },
-    },
-    'item_title': 'pairwiseFeatures',
-    'schema': entity_schema
-}
+# # either touching or collision
+# entity_connect_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'connected',
+#     'schema': entity_schema
+# }
+# entity_parallel_extrusion_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'paraExtrusion',
+#     'schema': entity_schema
+# }
+# entity_higher_centroid_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'higherCentroid',
+#     'schema': entity_schema
+# }
+# entity_lower_bottom_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'lowerBottom',
+#     'schema': entity_schema
+# }
+# entity_longger_extrusion_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'longgerExtrusion',
+#     'schema': entity_schema
+# }
+# entity_parallel_bridge_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'parallelBridge',
+#     'schema': entity_schema
+# }
+# entity_bigger_volume_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'volumeBigger',
+#     'schema': entity_schema
+# }
+# entity_complete_above_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'completeAbove',
+#     'schema': entity_schema
+# }
+# entity_closer_transverse_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'closerTansverse',
+#     'schema': entity_schema
+# }
+# entity_closer_longitudinal_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'closerLongi',
+#     'schema': entity_schema
+# }
+# entity_parallel_bridge_transverse_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'parallelBridgeTransverse',
+#     'schema': entity_schema
+# }
+# entity_vertical_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'Vertical',
+#     'schema': entity_schema
+# }
+# entity_overlap_z_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'overlapZ',
+#     'schema': entity_schema
+# }
+# entity_convex_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'convex',
+#     'schema': entity_schema
+# }
+# entity_shape_features_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'shapeFeatures',
+#     'schema': entity_schema
+# }
+# entity_pairwise_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'FileID': 1,
+#             'GlobalId': 1,
+#         },
+#     },
+#     'item_title': 'pairwiseFeatures',
+#     'schema': entity_schema
+# }
 # get all the elements' features of a model
 file_model_shape_feature_resource={
     'datasource': {
@@ -586,153 +586,164 @@ file_model_pair_feature_resource={
     'schema': file_schema
 }
 
+file_run_resource={
+    'datasource': {
+        'source': 'file',
+        'projection': {
+            'name': 1,
+        },
+    },
+    'item_title': 'run',
+    'schema': file_schema
+}
+
 # below are old staff
 ###########################################
 
-geometry_with_feature_resource={
-    'item_title': 'GeometryWithFeatur',
-    'schema': geometry_schema,
-    'datasource': {
-        'source': 'geometry',
-    },
-    'query_objectid_as_string':True,
-}
-geometry_with_entity_resource={
-    'datasource': {
-        'source': 'geometry',
-    },
-    'item_title': 'Shape',
-    'schema': geometry_schema
-}
+# geometry_with_feature_resource={
+#     'item_title': 'GeometryWithFeatur',
+#     'schema': geometry_schema,
+#     'datasource': {
+#         'source': 'geometry',
+#     },
+#     'query_objectid_as_string':True,
+# }
+# geometry_with_entity_resource={
+#     'datasource': {
+#         'source': 'geometry',
+#     },
+#     'item_title': 'Shape',
+#     'schema': geometry_schema
+# }
 
-geom_feature_search_resource = {
-    'item_title': 'GeometryFeature',
-    'schema': geom_feature_schema,
-    'datasource': {
-        'source': 'geometryFeature',
-    },
-    # 'query_objectid_as_string':True,
-}
+# geom_feature_search_resource = {
+#     'item_title': 'GeometryFeature',
+#     'schema': geom_feature_schema,
+#     'datasource': {
+#         'source': 'geometryFeature',
+#     },
+#     # 'query_objectid_as_string':True,
+# }
 
-entity_relProperties_resource = {
-    'datasource': {
-        'source': 'entity',
-        'filter': {
-            "EntityType":"IfcRelDefinesByProperties"
-        },
-        'projection':{
-            "Attribute":1,
-        }
-    },
-    'item_title': 'IfcRelDefinesByProperties',
-    'schema': entity_schema,
-    'query_objectid_as_string':True,
-} 
-entity_withProperty_resource = {
-    'datasource': {
-        'source': 'entity',
-        'projection':{
-            "EntityType":1,
-            "Attribute":1,
-            'Links':1,
-            'UserProperty':1,
-        }
-    },
-    'item_title': 'EntityHasProperty',
-    'schema': entity_schema,
-}
-entity_property_set_resource = {
-    'datasource': {
-        'source': 'entity',
-        'filter': {"EntityType":"IfcPropertySet"},
-        'projection': {
-            'Attribute':1,
-            'Links':1,
-            'Properties':1,
-        }
-    },
-    'item_title': 'PropertySet',
-    'schema': entity_schema,
-}
-entity_simple_resource ={
-    'datasource': {
-        'source': 'entity',
-        'projection':{
-            "EntityType":1,
-            "Attribute":1,
-        }
-    },
-    'item_title': 'Property',
-    'schema': entity_schema,
-}
-
-
-entity_guid_resource={
-    'datasource': {
-        'source': 'entity',
-        'projection': {
-            'Attribute': 1,
-            'FileID': 1,
-            'EntityType': 1,
-        },
-    },
-    'item_title': 'Shape',
-    'schema': entity_schema,
-    # 'query_objectid_as_string':True,
-}
-entity_no_link_resource = {
-    'datasource': {
-        'source': 'entity',
-        'filter': {"Links":[]},
-    },
-    'item_title': 'EntityHasNoLink',
-    # 'query_objectid_as_string': True,
-    # 'allow_unknown': True,
-    'schema': entity_schema
-}
+# entity_relProperties_resource = {
+#     'datasource': {
+#         'source': 'entity',
+#         'filter': {
+#             "EntityType":"IfcRelDefinesByProperties"
+#         },
+#         'projection':{
+#             "Attribute":1,
+#         }
+#     },
+#     'item_title': 'IfcRelDefinesByProperties',
+#     'schema': entity_schema,
+#     'query_objectid_as_string':True,
+# } 
+# entity_withProperty_resource = {
+#     'datasource': {
+#         'source': 'entity',
+#         'projection':{
+#             "EntityType":1,
+#             "Attribute":1,
+#             'Links':1,
+#             'UserProperty':1,
+#         }
+#     },
+#     'item_title': 'EntityHasProperty',
+#     'schema': entity_schema,
+# }
+# entity_property_set_resource = {
+#     'datasource': {
+#         'source': 'entity',
+#         'filter': {"EntityType":"IfcPropertySet"},
+#         'projection': {
+#             'Attribute':1,
+#             'Links':1,
+#             'Properties':1,
+#         }
+#     },
+#     'item_title': 'PropertySet',
+#     'schema': entity_schema,
+# }
+# entity_simple_resource ={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection':{
+#             "EntityType":1,
+#             "Attribute":1,
+#         }
+#     },
+#     'item_title': 'Property',
+#     'schema': entity_schema,
+# }
 
 
-query_schema = {
-    'FileID': {
-        'type': 'objectid',
-        'data_relation': {
-            'resource': 'file',
-            'field': '_id',
-            'embeddable': True
-        },
-    },
-    'Resource': {'type': 'string'},
-    'Clauses': {
-        'type': 'list',
-        'schema': {
-            'type':'dict',
-            'schema':{
-                'Field': {'type': 'string'},
-                'Variable': {'type': 'string'},
-                'Value': {},
-                'Operator': {'type':'string'}, 
-            }
-        }
-    },
-    'Description': {'type': 'string'},
-}
-query_resource = {
-    'item_title': 'Query',
-    'schema': query_schema,
-}
+# entity_guid_resource={
+#     'datasource': {
+#         'source': 'entity',
+#         'projection': {
+#             'Attribute': 1,
+#             'FileID': 1,
+#             'EntityType': 1,
+#         },
+#     },
+#     'item_title': 'Shape',
+#     'schema': entity_schema,
+#     # 'query_objectid_as_string':True,
+# }
+# entity_no_link_resource = {
+#     'datasource': {
+#         'source': 'entity',
+#         'filter': {"Links":[]},
+#     },
+#     'item_title': 'EntityHasNoLink',
+#     # 'query_objectid_as_string': True,
+#     # 'allow_unknown': True,
+#     'schema': entity_schema
+# }
+
+
+# query_schema = {
+#     'FileID': {
+#         'type': 'objectid',
+#         'data_relation': {
+#             'resource': 'file',
+#             'field': '_id',
+#             'embeddable': True
+#         },
+#     },
+#     'Resource': {'type': 'string'},
+#     'Clauses': {
+#         'type': 'list',
+#         'schema': {
+#             'type':'dict',
+#             'schema':{
+#                 'Field': {'type': 'string'},
+#                 'Variable': {'type': 'string'},
+#                 'Value': {},
+#                 'Operator': {'type':'string'}, 
+#             }
+#         }
+#     },
+#     'Description': {'type': 'string'},
+# }
+# query_resource = {
+#     'item_title': 'Query',
+#     'schema': query_schema,
+# }
 
 
 
-trimbleToken_resource={
-    'datasource': {
-        'source': 'user',
-        'projection': {
-            'trimble_email': 1,
-            'trimble_key': 1,
-        },
-    },
-    'item_title': 'TrimbleToken',
-    # 'query_objectid_as_string': True,
-    # 'allow_unknown': True,
-    'schema': user_schema
-}
+# trimbleToken_resource={
+#     'datasource': {
+#         'source': 'user',
+#         'projection': {
+#             'trimble_email': 1,
+#             'trimble_key': 1,
+#         },
+#     },
+#     'item_title': 'TrimbleToken',
+#     # 'query_objectid_as_string': True,
+#     # 'allow_unknown': True,
+#     'schema': user_schema
+# }

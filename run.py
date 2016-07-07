@@ -149,7 +149,6 @@ def connectChecking(my_mesh, mesh):
         return 1
     else:
         return -1
-        
 def parallelChecking(my_mesh, mesh):
     threshhold_degree=5
     absolute_angle=math.degrees(math.acos(abs(np.dot(my_mesh.extruded_axis,mesh.extruded_axis))))
@@ -157,25 +156,21 @@ def parallelChecking(my_mesh, mesh):
         return 1
     else:
         return -1
-        
 def higherCentroid(my_mesh, mesh):
     if my_mesh.centroid[2]>mesh.centroid[2]:
         return 1
     else:
         return -1
-        
 def lowerBottom(my_mesh, mesh):
     if my_mesh.min[2]<mesh.min[2]:
         return 1
     else:
         return -1
-        
 def longgerExtrusion(my_mesh, mesh):
     if my_mesh.length>mesh.length:
         return 1
     else:
         return -1
-    
 def bigger(my_mesh, mesh):
     if my_mesh.mesh.volume>mesh.mesh.volume:
         return 1
@@ -334,6 +329,158 @@ def get_source_with_shape(data):
 app.on_fetched_item_entityGeomFeature+=get_item_with_shape
 app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 
+# ###########################################
+# # model's features
+
+# # shape feature of all the elements
+def get_item_modelShapeFeatures(item):
+    # locate the spreadsheet
+    scope = ['https://spreadsheets.google.com/feeds']
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
+    gc = gspread.authorize(credentials)
+    wks = gc.open("toy bridge of SeeBIM - Feature matching")
+
+    # fetch the knowledge data
+    Knowledge = wks.worksheet("Shape Feature Knowledge")
+    knowledge_data=Knowledge.get_all_values()
+    elements=list()
+    knowledge_shape_norm_matrix=list()
+    headings=knowledge_data[0][1:]
+    for it in knowledge_data[1:]:
+        elements.append(it[0])
+        v = np.array(it[1:], dtype='|S4').astype(np.float)
+        norm=np.linalg.norm(v)
+        norm_vector=list()
+        if(norm==0):
+            norm_vector=np.zeros(len(v))
+        else:
+            norm_vector=np.divide(v,norm).tolist()
+        knowledge_shape_norm_matrix.append(norm_vector)
+    
+    # process the feature data    
+    app.config['DOMAIN']['geometryFeature']['pagination'] = False
+    features = get_internal('geometryFeature',**{"FileID":item["_id"]})[0]['_items']
+    app.config['DOMAIN']['geometryFeature']['pagination'] = True
+    
+    facts=dict()
+    for feature in features:
+        if feature['GlobalId'] in facts:
+            facts[feature['GlobalId']][feature['Feature']['Name']]=feature['Feature']['Value']
+        else:
+            facts[feature['GlobalId']]={feature['Feature']['Name']:feature['Feature']['Value']}
+
+    # fill the fact data
+    fact_shape_norm_matrix=list()
+    fact_sheet = wks.worksheet("Shape Feature Fact")
+    # fact_sheet.resize(1,fact_sheet.col_count)
+    parameters=fact_sheet.get_all_values()[0][1:]
+    for key in facts:
+        vector=list()
+        for para in parameters:
+            vector.append(facts[key][para])
+        norm=np.linalg.norm(vector)   
+        norm_vector=np.divide(vector,norm).tolist() 
+        fact_shape_norm_matrix.append(norm_vector)
+        vector.insert(0,key)
+        # fact_sheet.append_row(vector)
+    # item['matrix']=fact_shape_norm_matrix
+    
+    # dot product
+    products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    
+    # fill the matching result
+    worksheet_matching = wks.worksheet("Shape Feature Matching")
+    # there list candidate in decending
+    # worksheet_matching.resize(1,len(elements)*2+1)
+    j=0
+    # result with entityID as the key
+    for key in facts:
+        data=products[j].tolist()
+        data.insert(0,key)
+        candidates=np.array(elements)[np.argsort(products[j])[::-1]]
+        data=np.concatenate((data,candidates),axis=0)
+        # worksheet_matching.append_row(data)
+        j+=1
+app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
+
+def get_item_modelPairFeature(item):
+    # locate the spreadsheet
+    scope = ['https://spreadsheets.google.com/feeds']
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
+    gc = gspread.authorize(credentials)
+    wks = gc.open("toy bridge of SeeBIM - Feature matching")
+
+    # fetch the knowledge data
+    Knowledge = wks.worksheet("Pairwise Knowledge")
+    knowledge_data=Knowledge.get_all_values()
+    relations=list()
+    headings=knowledge_data[0][1:]
+    knowledge_shape_norm_matrix=list()
+    for it in knowledge_data[1:]:
+        rel=it[0].split(",")
+        relations.append({
+            rel[0]:rel[1]
+        })
+        v = np.array(it[1:], dtype='|S4').astype(np.float)
+        norm=np.linalg.norm(v)
+        norm_vector=list()
+        if(norm==0):
+            norm_vector=np.zeros(len(v))
+        else:
+            norm_vector=np.divide(v,norm).tolist()
+        knowledge_shape_norm_matrix.append(norm_vector)
+        
+        
+    app.config['DOMAIN']['pairwiseFeature']['pagination'] = False
+    entities = get_internal('pairwiseFeature',**{"FileID":item["_id"]})[0]['_items']
+    app.config['DOMAIN']['pairwiseFeature']['pagination'] = True
+    
+    # GlobalId
+    
+    whole_matrix=list()
+    relations=list()
+    features=list()
+    for entity in entities:
+        entity_id=entity['EntityID']
+        entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
+        GlobalId=entity_info['GlobalId']
+        matrix=entity_info['Matrix']
+        relation=entity_info['Relations']
+        if len(whole_matrix)==0:
+            whole_matrix=matrix
+            relations=relation
+            features=entity_info['Features']
+            print(relations)
+            continue
+        whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
+        relations=np.concatenate((relations,relation),axis=0).tolist()
+        print(relations)
+    print(len(whole_matrix))
+
+    # Knowledge = wks.worksheet("Shape Feature Knowledge")
+    # data=Knowledge.get_all_values()
+    # elements=list()
+    # knowledge_shape_norm_matrix=list()
+    # for item in data[1:]:
+    #     elements.append(item[0])
+    #     v = np.array(item[1:], dtype='|S4').astype(np.float)
+    #     norm=np.linalg.norm(v)
+    #     norm_vector=list()
+    #     if(norm==0):
+    #         norm_vector=[0.0,0.0,0.0]
+    #     else:
+    #         norm_vector=np.divide(v,norm).tolist()
+    #     knowledge_shape_norm_matrix.append(norm_vector)
+    
+    # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
+
+def get_item_run(item):
+    get_item_modelShapeFeatures(item)
+    # get_item_modelPairFeature(item)
+app.on_fetched_item_run+=get_item_run
+
+
 # # only return documents that have property sets, 
 # # however, ifcobject will start having properties, so potentially there're many
 # # in addition, an ifcproduct may not have property, then it is unexpectedly removed from the list
@@ -341,8 +488,8 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 #     lookup["PropertySets"] = {'$exists': True}
 # app.on_pre_GET_entityGeomFeature += pre_get_entity_geom_feature
 
-# ###########################################
-# # pairwise features
+###########################################
+# entity with features
 
 # # get all shape features of this element
 # def get_item_entityShapeFeatures(item):
@@ -459,120 +606,6 @@ app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 #     item['Features']=featurs
 #     item['GlobalId']=my_globalid
 # app.on_fetched_item_entityPairFeatures+=get_item_entityPairFeatures
-
-# ###########################################
-# # model's features
-
-# # shape feature of all the elements
-# def get_item_modelShapeFeatures(item):
-#     app.config['DOMAIN']['geometry']['pagination'] = False
-#     entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
-#     scope = ['https://spreadsheets.google.com/feeds']
-#     credentials = ServiceAccountCredentials.from_json_keyfile_name('seebim-credential.json', scope)
-#     gc = gspread.authorize(credentials)
-#     wks = gc.open("toy bridge of SeeBIM - Feature matching")
-#     fact_shape_norm_matrix=list()
-#     objects=list()
-#     worksheet = wks.worksheet("Shape Feature Fact")
-#     worksheet.resize(1,5)
-#     objects_ids=list()
-#     for entity in entities:
-#         entity_id=entity['EntityID']
-#         objects_ids.append(entity_id)
-#         entity_info = getitem_internal('entityShapeFeatures',**{"_id":entity_id})[0]
-#         GlobalId=entity_info['GlobalId']
-#         features=entity_info['ShapeFeatures']
-#         data=[features['ParallelBridgeLongitudinal'],features['ParallelBridgeTransverse'],features['Vertical'],features['Convex']]
-#         worksheet.append_row([GlobalId,data[0],data[1],data[2]])
-    
-#         objects.append(GlobalId)
-#         norm=np.linalg.norm(data)   
-#         norm_vector=np.divide(data,norm).tolist() 
-#         fact_shape_norm_matrix.append(norm_vector)
-
-#     Knowledge = wks.worksheet("Shape Feature Knowledge")
-#     data=Knowledge.get_all_values()
-#     elements=list()
-#     knowledge_shape_norm_matrix=list()
-#     for item in data[1:]:
-#         elements.append(item[0])
-#         v = np.array(item[1:], dtype='|S4').astype(np.float)
-#         norm=np.linalg.norm(v)
-#         norm_vector=list()
-#         if(norm==0):
-#             norm_vector=[0.0,0.0,0.0]
-#         else:
-#             norm_vector=np.divide(v,norm).tolist()
-#         knowledge_shape_norm_matrix.append(norm_vector)
-    
-#     products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
-    
-#     worksheet_matching = wks.worksheet("Shape Feature Matching")
-#     worksheet_matching.resize(1,len(elements)+1)
-#     i=2
-#     for element in elements:
-#         worksheet_matching.update_cell(1, i, element)
-#         i=i+1
-#     j=0
-#     for product in products:
-#         product=np.clip(product,0,product.max())
-#         if(sum(product)==0):
-#             norm_vector=product
-#         else:
-#             norm_vector=np.divide(product,sum(product))
-#         raw=list()
-#         raw.append(objects[j])
-#         j+=1
-#         for cell in norm_vector:
-#             raw.append(cell)
-#         worksheet_matching.append_row(raw)
-#     app.config['DOMAIN']['geometry']['pagination'] = True
-# app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
-
-
-# def get_item_modelPairFeature(item):
-#     app.config['DOMAIN']['geometry']['pagination'] = False
-#     entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
-#     app.config['DOMAIN']['geometry']['pagination'] = True
-    
-#     whole_matrix=list()
-#     relations=list()
-#     features=list()
-#     for entity in entities:
-#         entity_id=entity['EntityID']
-#         entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
-#         GlobalId=entity_info['GlobalId']
-#         matrix=entity_info['Matrix']
-#         relation=entity_info['Relations']
-#         if len(whole_matrix)==0:
-#             whole_matrix=matrix
-#             relations=relation
-#             features=entity_info['Features']
-#             print(relations)
-#             continue
-#         whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
-#         relations=np.concatenate((relations,relation),axis=0).tolist()
-#         print(relations)
-#     print(len(whole_matrix))
-
-#     # Knowledge = wks.worksheet("Shape Feature Knowledge")
-#     # data=Knowledge.get_all_values()
-#     # elements=list()
-#     # knowledge_shape_norm_matrix=list()
-#     # for item in data[1:]:
-#     #     elements.append(item[0])
-#     #     v = np.array(item[1:], dtype='|S4').astype(np.float)
-#     #     norm=np.linalg.norm(v)
-#     #     norm_vector=list()
-#     #     if(norm==0):
-#     #         norm_vector=[0.0,0.0,0.0]
-#     #     else:
-#     #         norm_vector=np.divide(v,norm).tolist()
-#     #     knowledge_shape_norm_matrix.append(norm_vector)
-    
-#     # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
-    
-# app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
 
 # ###########################################
