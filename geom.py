@@ -3,13 +3,18 @@
 
 import trimesh
 import numpy as np
+import math
 
 class Geom:
-    extruded_axis=list()
-    centroid=list()
-    max=list()
-    min=list()
-    length=float()
+    # extruded_axis=list()
+    # centroid=list()
+    # max=list()
+    # min=list()
+    # length=float()
+    # vertical=int()
+    # longitudinal=int()
+    # transverse=int()
+    # volume=float()
     def __init__(self,data=None):
         if data == None:
             self.mesh=None
@@ -71,34 +76,68 @@ class Geom:
                 },
             },
         ]
-        obb_axis=data[3]['Value']
-        # for bearing exception, no more than 600 wide or long
-        if np.linalg.norm(np.clip(ext,600,10000000000)-600)==0:
-            extruded_axis=[0,0,1]
-            length=sorted(ext)[0]
-            self.extruded_axis=extruded_axis
-            self.length=length
-        else:
-            length=0
-            axis='X'
-            extent=data[1]['Value']
-            for key in extent:
-                if length<extent[key]:
-                    axis=key
-                    length=extent[key]
-            extruded_axis=obb_axis[axis]
-            self.extruded_axis=extruded_axis
-            self.length=length
-        data.append({
-            'Name':'ExtrudedAxis',
-            'Description':'the major axis with greatest dimension',
-            'Value':extruded_axis,
-            })
-        data.append({
-            'Name':'ExtrusionLength',
-            'Description':'the greatest dimension',
-            'Value':length,
-            })
+        # obb_axis=data[3]['Value']
+        # # for bearing exception, no more than 600 wide or long
+        # if np.linalg.norm(np.clip(ext,600,10000000000)-600)==0:
+        #     extruded_axis=[0,0,1]
+        #     length=sorted(ext)[0]
+        #     self.extruded_axis=extruded_axis
+        #     self.length=length
+        # else:
+        #     length=0
+        #     axis='X'
+        #     extent=data[1]['Value']
+        #     for key in extent:
+        #         if length<extent[key]:
+        #             axis=key
+        #             length=extent[key]
+        #     extruded_axis=obb_axis[axis]
+        #     self.extruded_axis=extruded_axis
+        #     self.length=length
+        # data.append({
+        #     'Name':'ExtrudedAxis',
+        #     'Description':'the major axis with greatest dimension',
+        #     'Value':extruded_axis,
+        #     })
+        # data.append({
+        #     'Name':'ExtrusionLength',
+        #     'Description':'the greatest dimension',
+        #     'Value':length,
+        #     })
+        # threshhold_degree=5
+        # bridge_longitudinal=[1,0,0]
+        # vertical_axis=[0,0,1]
+        # bridge_transverse=[0,1,0]
+        # absolute_angle=math.degrees(math.acos(abs(np.dot(extruded_axis,vertical_axis))))
+        # if absolute_angle<threshhold_degree:
+        #     self.vertical=1
+        # else:
+        #     self.vertical=-1
+        # absolute_angle=math.degrees(math.acos(abs(np.dot(extruded_axis,bridge_longitudinal))))
+        # if absolute_angle<threshhold_degree:
+        #     self.longitudinal=1
+        # else:
+        #     self.longitudinal=-1   
+        # absolute_angle=math.degrees(math.acos(abs(np.dot(extruded_axis,bridge_transverse))))
+        # if absolute_angle<threshhold_degree:
+        #     self.transverse=1
+        # else:
+        #     self.transverse=-1       
+        # data.append({
+        #     'Name':'Vertical',
+        #     'Description':'Vertical',
+        #     'Value':self.vertical,
+        #     })
+        # data.append({
+        #     'Name':'Transverse',
+        #     'Description':'Transverse',
+        #     'Value':self.transverse,
+        #     })
+        # data.append({
+        #     'Name':'Longitudinal',
+        #     'Description':'Longitudinal',
+        #     'Value':self.longitudinal,
+        #     })
         
         return data
     
@@ -107,8 +146,8 @@ class Geom:
         if self.mesh is None:
             print("mesh is not loaded")
             return None
-        self.min=self.mesh.bounds[0]
-        self.max=self.mesh.bounds[1]
+        # self.min=self.mesh.bounds[0]
+        # self.max=self.mesh.bounds[1]
         data=[
             {
             'Name':'Centroid',
@@ -167,5 +206,6 @@ class Geom:
             'Value':self.mesh.volume,
             }
         ]
+        # self.volume=self.mesh.volume
         return data
     

@@ -176,6 +176,54 @@ def longgerExtrusion(my_mesh, mesh):
     else:
         return -1
         
+def bigger(my_mesh, mesh):
+    if my_mesh.volume>mesh.volume:
+        return 1
+    else:
+        return -1    
+def above(my_mesh, mesh):
+    if my_mesh.min[2]>=mesh.max[2]:
+        return 1
+    else:
+        return -1    
+def bridgeCentroid(meshes):
+    centroid=list()
+    min=list()
+    max=list()
+    for mesh in meshes:
+        if len(centroid)==0:
+            min=mesh.min
+            max=mesh.max
+        else:
+            if min[0]>mesh.min[0]:
+                min[0]=mesh.min[0]
+            if min[1]>mesh.min[1]:
+                min[1]=mesh.min[1]
+            if min[2]>mesh.min[2]:
+                min[2]=mesh.min[2]
+                
+            if max[0]<mesh.max[0]:
+                max[0]=mesh.max[0]
+            if max[1]<mesh.max[1]:
+                max[1]=mesh.max[1]
+            if max[2]<mesh.max[2]:
+                max[2]=mesh.max[2]
+    return [(min[0]+max[0])/2,(min[1]+max[1])/2,(min[2]+max[2])/2]
+def closer_longitudinal(my_mesh, mesh,bridge_centroid):
+    if abs(my_mesh.centroid[1]-bridge_centroid[1])<abs(mesh.centroid[1]-bridge_centroid[1]):
+        return 1
+    else:
+        return -1
+def closer_transverse(my_mesh, mesh,bridge_centroid):
+    if abs(my_mesh.centroid[0]-bridge_centroid[0])<abs(mesh.centroid[0]-bridge_centroid[0]):
+        return 1
+    else:
+        return -1
+def overlapZ(my_mesh, mesh):
+    if my_mesh.min[2]<=mesh.max[2] and mesh.min[2]<=my_mesh.max[2]:
+        return 1
+    else:
+        return -1    
 # add geometry and related features
 def add_geometry(items):
     meshes=list()
@@ -208,46 +256,53 @@ def add_geometry(items):
             })
     post_internal('geometryFeature',payload,skip_validation=True)
     
-    pair_payload=list()
-    for i in range(len(entityIds)):
-        my_mesh=meshes[i]
-        my_id=entityIds[i]
-        my_globalId=globalIds[i]
+    bridge_centroid=bridgeCentroid(meshes)
+    
+    # pair_payload=list()
+    # for i in range(len(entityIds)):
+    #     my_mesh=meshes[i]
+    #     my_id=entityIds[i]
+    #     my_globalId=globalIds[i]
         
-        connect_vector=list()
-        para_vector=list()
-        centorid_vector=list()
-        bottom_vector=list()
-        longger_vector=list()
-        # centorid_vector=list()
-        # centorid_vector=list()
-        # centorid_vector=list()
-        # centorid_vector=list()
-        for j in range(len(entityIds)):
-            your_globalId=globalIds[j]
-            if my_globalId==your_globalId:
-                continue
-            your_mesh=meshes[j]
-            your_id=entityIds[j]
+    #     connect_vector=list()
+    #     para_vector=list()
+    #     centorid_vector=list()
+    #     bottom_vector=list()
+    #     longger_vector=list()
+    #     bigger_vector=list()
+    #     above_vector=list()
+    #     closer_longitudinal_vector=list()
+    #     closer_transverse_vector=list()
+    #     overlapZ_vector=list()
+    #     for j in range(len(entityIds)):
+    #         your_globalId=globalIds[j]
+    #         if my_globalId==your_globalId:
+    #             continue
+    #         your_mesh=meshes[j]
+    #         your_id=entityIds[j]
 
-            connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
-            para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
-            centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
-            bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
-            longger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':longgerExtrusion(my_mesh,your_mesh)})
-            # para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
-            # centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
-            # bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
+    #         connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
+    #         para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
+    #         centorid_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':higherCentroid(my_mesh,your_mesh)})
+    #         bottom_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':lowerBottom(my_mesh,your_mesh)})
+    #         # longger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':longgerExtrusion(my_mesh,your_mesh)})
+    #         # bigger_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':bigger(my_mesh,your_mesh)})
+    #         # above_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':above(my_mesh,your_mesh)})
+    #         # closer_longitudinal_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_longitudinal(my_mesh,your_mesh,bridge_centroid)})
+    #         # closer_transverse_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':closer_transverse(my_mesh,your_mesh,bridge_centroid)})
+    #         # overlapZ_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':overlapZ(my_mesh,your_mesh)})
             
-        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
-        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
-        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
-        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
-        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':longger_vector}})
-        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
-        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
-        # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
-    post_internal('pairwiseFeature',pair_payload,skip_validation=True)
+    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
+    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
+    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':centorid_vector}})
+    #     pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'LowerBottom','Description':'I\'ve lower bottom','Vector':bottom_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Longger','Description':'either touching or collision','Vector':longger_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Bigger','Description':'bigger','Vector':bigger_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'HigherCentroid','Description':'I\'ve higher centroid','Vector':above_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserLongitudinal','Description':'closer_longitudinal_vector','Vector':closer_longitudinal_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserTransverse','Description':'closer_transverse_vector','Vector':closer_transverse_vector}})
+    #     # pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'CloserLongitudinal','Description':'closer_longitudinal_vector','Vector':overlapZ_vector}})
+    # post_internal('pairwiseFeature',pair_payload,skip_validation=True)
 app.on_insert_geometry+=add_geometry
 
 ###########################################
