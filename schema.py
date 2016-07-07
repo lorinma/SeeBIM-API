@@ -331,6 +331,49 @@ geom_feature_resource = {
     'query_objectid_as_string':True,
 }
 
+pair_feature_schema = {
+    'Feature': {
+        'type':'dict',
+        'schema':{
+            'Type': {'type': 'string'},
+            'Description': {'type': 'string'},
+            'Vector': {
+                'type':'list',
+                'schema':{
+                    'type':'dict',
+                    'schema':{
+                        'EntityID': {'type': 'string'},
+                        'GlobalId': {'type': 'string'},
+                        'Compare': {'type': 'numeric'},
+                    }
+                }
+            },
+        }
+    },
+    'GlobalId':{'type':'string'},
+    'FileID': {
+        'type': 'objectid',
+        'data_relation': {
+            'resource': 'file',
+            'field': '_id',
+            'embeddable': True
+        }
+    },
+    'EntityID': {
+        'type': 'objectid',
+        'data_relation': {
+            'resource': 'entity',
+            'field': '_id',
+            'embeddable': True
+        }
+    },
+}
+pair_feature_resource = {
+    'item_title': 'GeometryFeature',
+    'schema': pair_feature_schema,
+    'query_objectid_as_string':True,
+}
+
 entity_withGeometryFeature_resource={
     'datasource': {
         'source': 'entity',
@@ -341,6 +384,9 @@ entity_withGeometryFeature_resource={
     'item_title': 'EntityShapeFeature',
     'schema': entity_schema
 }
+
+
+
 
 # either touching or collision
 entity_connect_resource={
@@ -508,6 +554,17 @@ entity_shape_features_resource={
     'item_title': 'shapeFeatures',
     'schema': entity_schema
 }
+entity_pairwise_resource={
+    'datasource': {
+        'source': 'entity',
+        'projection': {
+            'FileID': 1,
+            'GlobalId': 1,
+        },
+    },
+    'item_title': 'pairwiseFeatures',
+    'schema': entity_schema
+}
 # get all the elements' features of a model
 file_model_shape_feature_resource={
     'datasource': {
@@ -520,6 +577,17 @@ file_model_shape_feature_resource={
     'schema': file_schema
 }
 
+# get all the elements' pairwise features of a model
+file_model_pair_feature_resource={
+    'datasource': {
+        'source': 'file',
+        'projection': {
+            'name': 1,
+        },
+    },
+    'item_title': 'modelPair',
+    'schema': file_schema
+}
 
 # below are old staff
 ###########################################

@@ -14,6 +14,7 @@ from flask import abort
 from bson.objectid import ObjectId
 
 import numpy as np
+import math
 
 from os.path import join, dirname
 from dotenv import load_dotenv
@@ -78,6 +79,8 @@ def get_project_by_id(_id):
 
 ###########################################
 # add file, first to trimble, then to mongo
+def get_user_by_firebase_uid(firebase_uid):
+    return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
 def add_file_to_trimble(items):
     tool=Util()
     token = get_trimble_token()
@@ -135,14 +138,40 @@ def get_trimble_file(item):
 app.on_fetched_item_fileTrimble+=get_trimble_file
 
 ###########################################
+# pairwise feature checking
+def connectChecking(my_mesh, mesh):
+    my_bound=my_mesh.mesh.bounds.reshape(1,6)[0]
+    my_tree=my_mesh.mesh.triangles_tree()
+    bound=mesh.mesh.bounds
+    bound=np.array([bound[0].dot(0.99).tolist(),bound[1].dot(1.01).tolist()]).reshape(1,6)[0]
+    potential_triangle_indices=list(my_tree.intersection(bound))
+    if len(potential_triangle_indices)>0:
+        return 1
+    else:
+        return -1
+        
+def parallelChecking(my_mesh, mesh):
+    threshhold_degree=5
+    absolute_angle=math.degrees(math.acos(abs(np.dot(my_mesh.extruded_axis,mesh.extruded_axis))))
+    if absolute_angle<threshhold_degree:
+        return 1
+    else:
+        return -1
+        
 # add geometry and related features
 def add_geometry(items):
+    meshes=list()
+    entityIds=list()
+    globalIds=list()
+    payload=list()
     for item in items:
         entity = getitem_internal('entity',**{"$and": [{"FileID":str(item["FileID"])},{"Attribute": {"$elemMatch":{"Value": str(item["GlobalId"]),"Name": "GlobalId"}}}]})[0]
         item['EntityID']=entity["_id"]
+        entityIds.append(entity["_id"])
+        globalIds.append(item["GlobalId"])
         # add features
         mesh=Geom(item['Geometry'])
-        payload=list()
+        meshes.append(mesh)
         obb_features=mesh.getOBBFeature()
         for obb_feature in obb_features:
             payload.append({
@@ -159,7 +188,28 @@ def add_geometry(items):
                 'EntityID':str(item['EntityID']),
                 'Feature':shape_feature
             })
-        post_internal('geometryFeature',payload,skip_validation=True)
+    post_internal('geometryFeature',payload,skip_validation=True)
+    
+    pair_payload=list()
+    for i in range(len(entityIds)):
+        my_mesh=meshes[i]
+        my_id=entityIds[i]
+        my_globalId=globalIds[i]
+        
+        connect_vector=list()
+        para_vector=list()
+        for j in range(len(entityIds)):
+            your_globalId=globalIds[j]
+            if my_globalId==your_globalId:
+                continue
+            your_mesh=meshes[j]
+            your_id=entityIds[j]
+
+            connect_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':connectChecking(my_mesh,your_mesh)})
+            para_vector.append({'EntityID':your_id,'GlobalId':your_globalId,'Compare':parallelChecking(my_mesh,your_mesh)})
+        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Connect','Description':'either touching or collision','Vector':connect_vector}})
+        pair_payload.append({'EntityID':item['EntityID'],'FileID':item['FileID'],'GlobalId':my_globalId,'Feature':{'Type':'Parallel','Description':'we are in parallel','Vector':para_vector}})
+    post_internal('pairwiseFeature',pair_payload,skip_validation=True)
 app.on_insert_geometry+=add_geometry
 
 ###########################################
@@ -204,7 +254,6 @@ def get_item_connected(item):
     geometries = get_internal('geometry',**{"FileID":item["FileID"],"EntityID":{'$ne':item["_id"]}})[0]['_items']
     compare=list()
     for geometry in geometries:
-        print(geometry['Geometry']['Vertices'][0])
         mesh=Geom(geometry['Geometry']).mesh
         # bound=mesh.bounds.reshape(1,6)[0]
         bound=mesh.bounds
@@ -701,9 +750,7 @@ app.on_fetched_item_convex+=get_item_convex
 
 # get all shape features of this element
 def get_item_entityShapeFeatures(item):
-    app.config['DOMAIN']['geometry']['pagination'] = False
     vertical = getitem_internal('Vertical',**{"_id":item["_id"]})[0]
-    print(vertical)
     item['ShapeFeatures']={
         'ParallelBridgeLongitudinal':getitem_internal('parallelBridge',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
         'ParallelBridgeTransverse':getitem_internal('paraBriTrans',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
@@ -711,8 +758,111 @@ def get_item_entityShapeFeatures(item):
         'Convex':getitem_internal('convex',**{"_id":item["_id"]})[0]['Compare']['Vector'][0]['Compare'],
     }
     item['GlobalId']=vertical['Compare']['Vector'][0]['GlobalId']
-    app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_entityShapeFeatures+=get_item_entityShapeFeatures
+
+# get all shape features of this element
+def get_item_entityPairFeatures(item):
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    others=get_internal('geometry',**{"EntityID":{'$ne':item["_id"]}})[0]['_items']
+    featurs=['Contact','Parallel extrusion','Higher centroid', 'Lower bottom',	'Longger extrusion',	'Bigger',	'Complete above',	'Closer to transverse axis',	'Closer to longitudinal axis',	'Overlap in z']
+    my_globalid=getitem_internal('geometry',**{"EntityID":item["_id"]})[0]['GlobalId']
+    GlobalIds=list()
+    for other in others:
+        GlobalIds.append({
+            my_globalid:other['GlobalId']
+            }
+        )
+        
+    app.config['DOMAIN']['geometry']['pagination'] = True
+    data=dict()
+    matrix=list()
+    vector=list()
+    
+    connect = getitem_internal('connect',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in connect:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    paraExtrusion = getitem_internal('paraExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in paraExtrusion:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    higherCentroid = getitem_internal('higherCentroid',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in higherCentroid:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    lowerBottom = getitem_internal('lowerBottom',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in lowerBottom:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    longgerExtrusion = getitem_internal('longgerExtrusion',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in longgerExtrusion:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    volumeBigger = getitem_internal('volumeBigger',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in volumeBigger:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    completeAbove = getitem_internal('completeAbove',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in completeAbove:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    closerTran = getitem_internal('closerTran',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in closerTran:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    closerLongi = getitem_internal('closerLongi',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in closerLongi:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    overlapZ = getitem_internal('overlapZ',**{"_id":item["_id"]})[0]['Compare']['Vector']
+    for it in overlapZ:
+        data[it['EntityID']]=it['Compare']
+    for other in others:
+        vector.append(data[other['EntityID']])
+    matrix.append(vector)
+    
+    t_matrix=np.transpose(matrix)
+    matrix_norm=list()
+    for v in t_matrix:
+        norm=np.linalg.norm(v)
+        norm_vector=list()
+        if(norm==0):
+            norm_vector=[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
+        else:
+            norm_vector=np.divide(v,norm).tolist()
+        matrix_norm.append(norm_vector)
+    item["Matrix"]=matrix_norm
+    item["Relations"]=GlobalIds
+    item['Features']=featurs
+    item['GlobalId']=my_globalid
+app.on_fetched_item_entityPairFeatures+=get_item_entityPairFeatures
 
 ###########################################
 # model's features
@@ -783,6 +933,50 @@ def get_item_modelShapeFeatures(item):
     app.config['DOMAIN']['geometry']['pagination'] = True
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 
+
+def get_item_modelPairFeature(item):
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+    app.config['DOMAIN']['geometry']['pagination'] = True
+    
+    whole_matrix=list()
+    relations=list()
+    features=list()
+    for entity in entities:
+        entity_id=entity['EntityID']
+        entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
+        GlobalId=entity_info['GlobalId']
+        matrix=entity_info['Matrix']
+        relation=entity_info['Relations']
+        if len(whole_matrix)==0:
+            whole_matrix=matrix
+            relations=relation
+            features=entity_info['Features']
+            print(relations)
+            continue
+        whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
+        relations=np.concatenate((relations,relation),axis=0).tolist()
+        print(relations)
+    print(len(whole_matrix))
+
+    # Knowledge = wks.worksheet("Shape Feature Knowledge")
+    # data=Knowledge.get_all_values()
+    # elements=list()
+    # knowledge_shape_norm_matrix=list()
+    # for item in data[1:]:
+    #     elements.append(item[0])
+    #     v = np.array(item[1:], dtype='|S4').astype(np.float)
+    #     norm=np.linalg.norm(v)
+    #     norm_vector=list()
+    #     if(norm==0):
+    #         norm_vector=[0.0,0.0,0.0]
+    #     else:
+    #         norm_vector=np.divide(v,norm).tolist()
+    #     knowledge_shape_norm_matrix.append(norm_vector)
+    
+    # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    
+app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
 
 ###########################################
@@ -1003,8 +1197,7 @@ app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 # app.on_fetched_item_query+=get_item_query
 # # app.on_fetched_source_query+=get_source_query
 
-# def get_user_by_firebase_uid(firebase_uid):
-#     return getitem_internal('user',**{'firebase_uid': firebase_uid})[0]
+
 # def get_token_item(item):
 #     para={'emailAddress':item['trimble_email'], 'key':item['trimble_key']}
 #     headers={"Content-Type":"application/json"}

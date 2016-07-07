@@ -5,6 +5,7 @@ import trimesh
 import numpy as np
 
 class Geom:
+    extruded_axis=list()
     def __init__(self,data=None):
         if data == None:
             self.mesh=None
@@ -73,11 +74,11 @@ class Geom:
             if greatest_value<extent[key]:
                 axis=key
                 greatest_value=extent[key]
-        extruded_axis=obb_axis[axis]
+        self.extruded_axis=obb_axis[axis]
         data.append({
             'Name':'ExtrudedAxis',
             'Description':'the major axis with greatest dimension',
-            'Value':extruded_axis,
+            'Value':self.extruded_axis,
             })
         data.append({
             'Name':'ExtrusionLength',

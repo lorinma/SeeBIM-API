@@ -44,6 +44,7 @@ DOMAIN= {
     'entity': schema.entity_resource,
     'geometry': schema.geometry_resource,
     'geometryFeature': schema.geom_feature_resource,
+    'pairwiseFeature': schema.pair_feature_resource,
     'entityGeomFeature': schema.entity_withGeometryFeature_resource,
     
     'connect':schema.entity_connect_resource,
@@ -61,8 +62,10 @@ DOMAIN= {
     'overlapZ':schema.entity_overlap_z_resource,
     'convex':schema.entity_convex_resource,
     'entityShapeFeatures':schema.entity_shape_features_resource,
+    'entityPairFeatures':schema.entity_pairwise_resource,
     
     'modelShapeFeature':schema.file_model_shape_feature_resource,
+    'modelPairFeature':schema.file_model_pair_feature_resource,
 
 
 
