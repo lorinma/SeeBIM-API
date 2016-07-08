@@ -374,6 +374,7 @@ def get_item_modelShapeFeatures(item):
     fact_sheet = wks.worksheet("Shape Feature Fact")
     # fact_sheet.resize(1,fact_sheet.col_count)
     parameters=fact_sheet.get_all_values()[0][1:]
+    object_list=list()
     for key in facts:
         vector=list()
         for para in parameters:
@@ -381,6 +382,7 @@ def get_item_modelShapeFeatures(item):
         norm=np.linalg.norm(vector)   
         norm_vector=np.divide(vector,norm).tolist() 
         fact_shape_norm_matrix.append(norm_vector)
+        object_list.append(key)
         vector.insert(0,key)
         # fact_sheet.append_row(vector)
     # item['matrix']=fact_shape_norm_matrix
@@ -392,15 +394,15 @@ def get_item_modelShapeFeatures(item):
     worksheet_matching = wks.worksheet("Shape Feature Matching")
     # there list candidate in decending
     # worksheet_matching.resize(1,len(elements)*2+1)
-    j=0
     # result with entityID as the key
-    for key in facts:
+    for j in range(object_list):
         data=products[j].tolist()
-        data.insert(0,key)
-        candidates=np.array(elements)[np.argsort(products[j])[::-1]]
+        candidates=np.array(elements)[np.argsort(data)[::-1]]
         data=np.concatenate((data,candidates),axis=0)
+        data.insert(0,object_list[j])
         # worksheet_matching.append_row(data)
-        j+=1
+    
+    return products
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 
 def get_item_modelPairFeature(item):
@@ -414,8 +416,9 @@ def get_item_modelPairFeature(item):
     Knowledge = wks.worksheet("Pairwise Knowledge")
     knowledge_data=Knowledge.get_all_values()
     relations=list()
-    headings=knowledge_data[0][1:]
+    parameters=knowledge_data[0][1:]
     knowledge_shape_norm_matrix=list()
+    element_list=list()
     for it in knowledge_data[1:]:
         rel=it[0].split(",")
         relations.append({
@@ -429,55 +432,115 @@ def get_item_modelPairFeature(item):
         else:
             norm_vector=np.divide(v,norm).tolist()
         knowledge_shape_norm_matrix.append(norm_vector)
-        
-        
+        # gather all the elements
+        if rel[0] not in element_list:
+            element_list.append(rel[0])
+    
     app.config['DOMAIN']['pairwiseFeature']['pagination'] = False
-    entities = get_internal('pairwiseFeature',**{"FileID":item["_id"]})[0]['_items']
+    pairs = get_internal('pairwiseFeature',**{"FileID":item["_id"]})[0]['_items']
     app.config['DOMAIN']['pairwiseFeature']['pagination'] = True
     
-    # GlobalId
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+    app.config['DOMAIN']['geometry']['pagination'] = True
+    # reorganize the data dict
+    pair_facts=dict()
+    for pair in pairs:
+        guid=pair['GlobalId']
+        type=pair['Feature']['Type']
+        vector=pair['Feature']['Vector']
+        for i in vector:
+            cell=i['Compare']
+            obj=i['GlobalId']
+            data={guid:{obj:{type:cell}}}
+            if guid not in pair_facts:
+                pair_facts[guid]=data[guid]
+                continue
+            if obj not in pair_facts[guid]:
+                pair_facts[guid][obj]=data[guid][obj]
+                continue
+            if type not in pair_facts[guid][obj]:
+                pair_facts[guid][obj][type]=data[guid][obj][type]
+                continue
+    # reshape the dict to 2d list
+    object_list=list()
+    norm_fact_matrix=list()
+    for entity1 in entities:
+        guid1=entity1['GlobalId']
+        # get all the objects
+        object_list.append(guid1)
+        for entity2 in entities:
+            guid2=entity2['GlobalId']
+            if guid1==guid2:
+                continue
+            vector=list()
+            for para in parameters:
+                vector.append(pair_facts[guid1][guid2][para])
+            norm=np.linalg.norm(v)
+            norm_vector=list()
+            norm_vector=np.divide(vector,norm).tolist()
+            norm_fact_matrix.append(norm_vector)
+    # dot product
+    matrix=np.dot(norm_fact_matrix,np.transpose(knowledge_shape_norm_matrix))
+    # find the indices of interesting ranges and sum to form a cell of the matching matrix
+    object_count=len(object_list)
+    element_count=len(element_list)
+    match_matrix=list()
+    for object_list_index in range(len(object_list)):
+        match_vector=list()
+        for element_list_index in range(len(element_list)):
+            object_index=object_list_index*(object_count-1)
+            element_index=element_list_index*(element_count-1)
+            rows=matrix[object_index:object_index+object_count-1]
+            my_range1=rows.transpose()[element_index:element_index+element_count-1].transpose()
+            
+            obj_index=list()
+            for i in range(object_list_index):
+                obj_index.append(i*(object_count-1)+object_list_index-1)
+            for i in range(object_list_index+1,object_count,1):
+                obj_index.append(i*(object_count-1)+object_list_index)
+                
+            ele_index=list()
+            for i in range(element_list_index):
+                ele_index.append(i*(element_count-1)+element_list_index-1)
+            for i in range(element_list_index+1,element_count,1):
+                ele_index.append(i*(element_count-1)+element_list_index)
+            my_range2=matrix[obj_index].transpose()[ele_index].transpose()
+            
+            match_vector.append(my_range1.sum()+my_range2.sum())
+        # normalize the result
+        norm=np.linalg.norm(match_vector)
+        norm_vector=list()
+        if(norm==0):
+            norm_vector=np.zeros(len(match_vector))
+        else:
+            norm_vector=np.divide(match_vector,norm).tolist()
+        match_matrix.append(norm_vector)
+        # match_matrix.append(match_vector)
     
-    whole_matrix=list()
-    relations=list()
-    features=list()
-    for entity in entities:
-        entity_id=entity['EntityID']
-        entity_info = getitem_internal('entityPairFeatures',**{"_id":entity_id})[0]
-        GlobalId=entity_info['GlobalId']
-        matrix=entity_info['Matrix']
-        relation=entity_info['Relations']
-        if len(whole_matrix)==0:
-            whole_matrix=matrix
-            relations=relation
-            features=entity_info['Features']
-            print(relations)
-            continue
-        whole_matrix=np.concatenate((whole_matrix,matrix),axis=0).tolist()
-        relations=np.concatenate((relations,relation),axis=0).tolist()
-        print(relations)
-    print(len(whole_matrix))
-
-    # Knowledge = wks.worksheet("Shape Feature Knowledge")
-    # data=Knowledge.get_all_values()
-    # elements=list()
-    # knowledge_shape_norm_matrix=list()
-    # for item in data[1:]:
-    #     elements.append(item[0])
-    #     v = np.array(item[1:], dtype='|S4').astype(np.float)
-    #     norm=np.linalg.norm(v)
-    #     norm_vector=list()
-    #     if(norm==0):
-    #         norm_vector=[0.0,0.0,0.0]
-    #     else:
-    #         norm_vector=np.divide(v,norm).tolist()
-    #     knowledge_shape_norm_matrix.append(norm_vector)
+    # dvide makes no sense,because they are from different base
+    # match_matrix=np.divide(match_matrix,2*(object_count-1)*(element_count-1))
     
-    # products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
+    # fill the matching result
+    worksheet_matching = wks.worksheet("Pairwise Matching")
+    # there list candidate in decending
+    worksheet_matching.resize(1,worksheet_matching.col_count)
+    # result with entityID as the key
+    for j in range(len(object_list)):
+        data=match_matrix[j].tolist()
+        candidates=np.array(element_list)[np.argsort(data)[::-1]]
+        data=np.concatenate((data,candidates),axis=0).tolist()
+        data.insert(0,object_list[j])
+        worksheet_matching.append_row(data)
+    return match_matrix
+    
 app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
 def get_item_run(item):
-    get_item_modelShapeFeatures(item)
-    # get_item_modelPairFeature(item)
+    shape_match_matrix=get_item_modelShapeFeatures(item)
+    pair_match_matrix=get_item_modelPairFeature(item)
+    # average? square root?
+    
 app.on_fetched_item_run+=get_item_run
 
 
