@@ -67,6 +67,7 @@ DOMAIN= {
     'modelShapeFeature':schema.file_model_shape_feature_resource,
     'modelPairFeature':schema.file_model_pair_feature_resource,
     'run':schema.file_run_resource,
+    'clear':schema.file_clear_resource,
 
 
 

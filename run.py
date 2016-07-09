@@ -177,7 +177,7 @@ def bigger(my_mesh, mesh):
     else:
         return -1    
 def above(my_mesh, mesh):
-    if my_mesh.min[2]>=mesh.max[2]:
+    if my_mesh.min[2]>mesh.max[2]:
         return 1
     else:
         return -1    
@@ -192,7 +192,7 @@ def closer_transverse(my_mesh, mesh,bridge_centroid):
     else:
         return -1
 def overlapZ(my_mesh, mesh):
-    if my_mesh.min[2]<mesh.max[2] and mesh.min[2]<my_mesh.max[2]:
+    if my_mesh.min[2]*1.01<mesh.max[2] and mesh.min[2]<my_mesh.max[2]*0.99:
         return 1
     else:
         return -1 
@@ -329,10 +329,10 @@ def get_source_with_shape(data):
 app.on_fetched_item_entityGeomFeature+=get_item_with_shape
 app.on_fetched_source_entityGeomFeature+=get_source_with_shape
 
-# ###########################################
-# # model's features
+###########################################
+# model's features
 
-# # shape feature of all the elements
+# shape feature of all the elements
 def get_item_modelShapeFeatures(item):
     # locate the spreadsheet
     scope = ['https://spreadsheets.google.com/feeds']
@@ -391,17 +391,21 @@ def get_item_modelShapeFeatures(item):
     products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
     
     # fill the matching result
-    worksheet_matching = wks.worksheet("Shape Feature Matching")
+    # worksheet_matching = wks.worksheet("Shape Feature Matching")
     # there list candidate in decending
     # worksheet_matching.resize(1,len(elements)*2+1)
     # result with entityID as the key
-    for j in range(object_list):
+    for j in range(len(object_list)):
         data=products[j].tolist()
-        candidates=np.array(elements)[np.argsort(data)[::-1]]
-        data=np.concatenate((data,candidates),axis=0)
-        data.insert(0,object_list[j])
+        candidates=np.array(elements)[np.argsort(data)[::-1]].tolist()
+        update_user_property(object_list[j],{
+            'Name':'Shape-based',
+            'Description':'Shape-based Enrichment',
+            'Value': str(candidates)
+        })
+        # data=np.concatenate((data,candidates),axis=0)
+        # data.insert(0,object_list[j])
         # worksheet_matching.append_row(data)
-    
     return products
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
 
@@ -527,22 +531,88 @@ def get_item_modelPairFeature(item):
     worksheet_matching.resize(1,worksheet_matching.col_count)
     # result with entityID as the key
     for j in range(len(object_list)):
-        data=match_matrix[j].tolist()
-        candidates=np.array(element_list)[np.argsort(data)[::-1]]
-        data=np.concatenate((data,candidates),axis=0).tolist()
-        data.insert(0,object_list[j])
-        worksheet_matching.append_row(data)
+        data=match_matrix[j]
+        candidates=np.array(element_list)[np.argsort(data)[::-1]].tolist()
+        update_user_property(object_list[j],{
+            'Name':'Pair-based',
+            'Description':'Pair-based Enrichment',
+            'Value': str(candidates)
+        })
+        # data=np.concatenate((data,candidates),axis=0).tolist()
+        # data.insert(0,object_list[j])
+        # worksheet_matching.append_row(data)
     return match_matrix
-    
 app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
 def get_item_run(item):
-    shape_match_matrix=get_item_modelShapeFeatures(item)
+    fact_shape_norm_matrix=get_item_modelShapeFeatures(item)
     pair_match_matrix=get_item_modelPairFeature(item)
     # average? square root?
-    
 app.on_fetched_item_run+=get_item_run
 
+def get_item_clear(item):
+    app.config['DOMAIN']['geometry']['pagination'] = False
+    entities = get_internal('geometry',**{"FileID":item["_id"]})[0]['_items']
+    app.config['DOMAIN']['geometry']['pagination'] = True
+    # clean enrichment fields if any
+    for entity in entities:
+        entity_data=getitem_internal('entity',**{'_id': entity['EntityID']})[0]
+        if 'UserProperty' in entity_data and len(entity_data['UserProperty'])>0:
+            payload={'UserProperty':entity_data['UserProperty']}
+            for p_set in payload['UserProperty']:
+                if p_set['Name']=='Enrichment' and len(p_set['Children'])>0:
+                    for p in p_set['Children']:
+                        if p['Name']=='Shape-based' or p['Name']=='Pair-based':
+                            p['Value']=''
+        else:
+            payload={
+                'UserProperty':[{
+                    'Name':'Enrichment',
+                    'Description':'Enrichment',
+                    'Children':[
+                    {
+                        'Name':'Shape-based',
+                        'Description':'Shape-based Enrichment',
+                        'Value':'',
+                    },
+                    {
+                        'Name':'Pair-based',
+                        'Description':'Pair-based Enrichment',
+                        'Value':'',
+                    }],
+                }]
+            }
+        patch_internal('entity',payload,**{'_id': entity['EntityID']})
+    # pair_match_matrix=get_item_modelPairFeature(item)
+    # average? square root?
+app.on_fetched_item_clear+=get_item_clear
+
+###########################################
+# update an entity
+
+def update_user_property(guid,data):
+    entity_data=getitem_internal('entity',**{"Attribute": {"$elemMatch":{"Value": guid,"Name": "GlobalId"}}})[0]
+    
+    if 'UserProperty' in entity_data and len(entity_data['UserProperty'])>0:
+        payload={'UserProperty':entity_data['UserProperty']}
+        for p_set in payload['UserProperty']:
+            if p_set['Name']=='Enrichment' and len(p_set['Children'])>0:
+                hasMe=False
+                for p in p_set['Children']:
+                    if p['Name']==data['Name']:
+                        p['Value']=data['Value']
+                        hasMe=True
+                if not hasMe:
+                    p_set['Children'].append(data)
+    else:
+        payload={
+            'UserProperty':[{
+                'Name':'Enrichment',
+                'Description':'Enrichment',
+                'Children':[data],
+            }]
+        }
+    patch_internal('entity',payload,**{'_id': entity_data['_id']})
 
 # # only return documents that have property sets, 
 # # however, ifcobject will start having properties, so potentially there're many

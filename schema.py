@@ -597,6 +597,17 @@ file_run_resource={
     'schema': file_schema
 }
 
+file_clear_resource={
+    'datasource': {
+        'source': 'file',
+        'projection': {
+            'name': 1,
+        },
+    },
+    'item_title': 'clear',
+    'schema': file_schema
+}
+
 # below are old staff
 ###########################################
 
