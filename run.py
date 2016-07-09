@@ -383,16 +383,15 @@ def get_item_modelShapeFeatures(item):
         norm_vector=np.divide(vector,norm).tolist() 
         fact_shape_norm_matrix.append(norm_vector)
         object_list.append(key)
-        vector.insert(0,key)
+        # vector.insert(0,key)
         # fact_sheet.append_row(vector)
-    # item['matrix']=fact_shape_norm_matrix
     
     # dot product
     products=np.dot(fact_shape_norm_matrix,np.transpose(knowledge_shape_norm_matrix))
     
-    # fill the matching result
+    # # fill the matching result
     # worksheet_matching = wks.worksheet("Shape Feature Matching")
-    # there list candidate in decending
+    # # there list candidate in decending
     # worksheet_matching.resize(1,len(elements)*2+1)
     # result with entityID as the key
     for j in range(len(object_list)):
@@ -402,9 +401,9 @@ def get_item_modelShapeFeatures(item):
             'Name':'Shape-based',
             'Description':'Shape-based Enrichment',
             'Value': str(candidates)
-        })
-        # data=np.concatenate((data,candidates),axis=0)
-        # data.insert(0,object_list[j])
+        },item['_id'])
+        data=np.concatenate((data,candidates),axis=0).tolist()
+        data.insert(0,object_list[j])
         # worksheet_matching.append_row(data)
     return products
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
@@ -468,6 +467,8 @@ def get_item_modelPairFeature(item):
                 continue
     # reshape the dict to 2d list
     object_list=list()
+    fact_sheet = wks.worksheet("Pairwise Fact")
+    # fact_sheet.resize(1,fact_sheet.col_count)
     norm_fact_matrix=list()
     for entity1 in entities:
         guid1=entity1['GlobalId']
@@ -480,16 +481,37 @@ def get_item_modelPairFeature(item):
             vector=list()
             for para in parameters:
                 vector.append(pair_facts[guid1][guid2][para])
-            norm=np.linalg.norm(v)
+            norm=np.linalg.norm(vector)
             norm_vector=list()
             norm_vector=np.divide(vector,norm).tolist()
             norm_fact_matrix.append(norm_vector)
+            # append row to gsheet
+            vector.insert(0,guid1+','+guid2)
+            # fact_sheet.append_row(vector)
     # dot product
     matrix=np.dot(norm_fact_matrix,np.transpose(knowledge_shape_norm_matrix))
+    # fill the matching result
+    worksheet_matching = wks.worksheet("Pairwise Matching")
+    # there list candidate in decending
+    worksheet_matching.resize(1,worksheet_matching.col_count)
+    matrix_inx=0
+    for entity1 in entities:
+        guid1=entity1['GlobalId']
+        for entity2 in entities:
+            guid2=entity2['GlobalId']
+            if guid1==guid2:
+                continue
+            vector=matrix[matrix_inx].tolist()
+            matrix_inx+=1
+            vector.insert(0,guid1+','+guid2)
+            # append row to matching result
+            worksheet_matching.append_row(vector)
+    
     # find the indices of interesting ranges and sum to form a cell of the matching matrix
     object_count=len(object_list)
     element_count=len(element_list)
     match_matrix=list()
+    match_matrix_direct=list()
     for object_list_index in range(len(object_list)):
         match_vector=list()
         for element_list_index in range(len(element_list)):
@@ -512,6 +534,7 @@ def get_item_modelPairFeature(item):
             my_range2=matrix[obj_index].transpose()[ele_index].transpose()
             
             match_vector.append(my_range1.sum()+my_range2.sum())
+            
         # normalize the result
         norm=np.linalg.norm(match_vector)
         norm_vector=list()
@@ -520,10 +543,25 @@ def get_item_modelPairFeature(item):
         else:
             norm_vector=np.divide(match_vector,norm).tolist()
         match_matrix.append(norm_vector)
+        match_matrix_direct.append(match_vector)
         # match_matrix.append(match_vector)
     
-    # dvide makes no sense,because they are from different base
-    # match_matrix=np.divide(match_matrix,2*(object_count-1)*(element_count-1))
+    # fill the matching result
+    worksheet_matching_result = wks.worksheet("Pairwise Matching Processed")
+    # there list candidate in decending
+    worksheet_matching_result.resize(1,worksheet_matching_result.col_count)
+    matrix_inx=0
+    for entity1 in entities:
+        guid1=entity1['GlobalId']
+        for entity2 in entities:
+            guid2=entity2['GlobalId']
+            if guid1==guid2:
+                continue
+            vector=match_matrix_direct[matrix_inx]
+            matrix_inx+=1
+            vector.insert(0,guid1+','+guid2)
+            # append row to matching result
+            # worksheet_matching_result.append_row(vector)
     
     # fill the matching result
     worksheet_matching = wks.worksheet("Pairwise Matching")
@@ -537,7 +575,7 @@ def get_item_modelPairFeature(item):
             'Name':'Pair-based',
             'Description':'Pair-based Enrichment',
             'Value': str(candidates)
-        })
+        },item['_id'])
         # data=np.concatenate((data,candidates),axis=0).tolist()
         # data.insert(0,object_list[j])
         # worksheet_matching.append_row(data)
@@ -590,8 +628,8 @@ app.on_fetched_item_clear+=get_item_clear
 ###########################################
 # update an entity
 
-def update_user_property(guid,data):
-    entity_data=getitem_internal('entity',**{"Attribute": {"$elemMatch":{"Value": guid,"Name": "GlobalId"}}})[0]
+def update_user_property(guid,data,file_id):
+    entity_data=getitem_internal('entity',**{"FileID":file_id,"Attribute": {"$elemMatch":{"Value": guid,"Name": "GlobalId"}}})[0]
     
     if 'UserProperty' in entity_data and len(entity_data['UserProperty'])>0:
         payload={'UserProperty':entity_data['UserProperty']}
