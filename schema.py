@@ -188,7 +188,7 @@ entity_schema = {
                         'schema':{
                             'Name': {'type': 'string'},
                             'Description': {'type':'string'},
-                            'Value': {'type':'string'},
+                            'Value': {},
                         }
                     }
                 }
@@ -594,7 +594,8 @@ file_run_resource={
         },
     },
     'item_title': 'run',
-    'schema': file_schema
+    'schema': file_schema,
+    'cache_expires':1,
 }
 
 file_clear_resource={

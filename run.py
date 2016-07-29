@@ -395,15 +395,40 @@ def get_item_modelShapeFeatures(item):
     # worksheet_matching.resize(1,len(elements)*2+1)
     # result with entityID as the key
     for j in range(len(object_list)):
-        data=products[j].tolist()
-        candidates=np.array(elements)[np.argsort(data)[::-1]].tolist()
-        update_user_property(object_list[j],{
-            'Name':'Shape-based',
-            'Description':'Shape-based Enrichment',
-            'Value': str(candidates)+str(np.sort(data)[::-1])
-        },item['_id'])
-        data=np.concatenate((data,candidates),axis=0).tolist()
-        data.insert(0,object_list[j])
+        # data=products[j].tolist()
+        # candidates=np.array(elements)[np.argsort(data)[::-1]].tolist()
+        data=products[j]
+        candidates=np.array(elements)
+        distinct_decent=np.sort(np.unique(data))[::-1]
+        top_list=list()
+        # number of elements return
+        count = 2 
+        for i in range(count):
+            decent_utility_index=np.argwhere(data==distinct_decent[i])
+            decent_utility_index=decent_utility_index.reshape(1,decent_utility_index.size)[0].tolist()
+            # print(decent_utility_index)
+            top_list+=decent_utility_index
+            if len(top_list)>=count:
+                break
+        top_candidates=candidates[top_list]
+        top_data=data[top_list]
+        properties=list()
+        for i in range(len(top_list)):
+            properties.append({
+                'Name':top_candidates[i],
+                'Description':'Similarity score',
+                'Value':top_data[i]
+            })
+        # utility_value=np.sort(data)[::-1]
+        # np.argwhere(a==max(a))
+        user_property={
+            'Name':'Geometry-based classification',
+            'Description':'Object classification based on how similar the geometry is',
+            'Children': properties
+        }
+        update_user_property(object_list[j],user_property,item['_id'])
+        # data=np.concatenate((data,candidates),axis=0).tolist()
+        # data.insert(0,object_list[j])
         # worksheet_matching.append_row(data)
     return products
 app.on_fetched_item_modelShapeFeature+=get_item_modelShapeFeatures
@@ -566,13 +591,43 @@ def get_item_modelPairFeature(item):
     # fill the matching result
     # result with entityID as the key
     for j in range(len(object_list)):
-        data=match_matrix[j]
-        candidates=np.array(element_list)[np.argsort(data)[::-1]].tolist()
-        update_user_property(object_list[j],{
-            'Name':'Pair-based',
-            'Description':'Pair-based Enrichment',
-            'Value': str(candidates)+str(np.sort(data)[::-1])
-        },item['_id'])
+        data=np.array(match_matrix[j])
+        candidates=np.array(element_list)
+        # update_user_property(object_list[j],{
+        #     'Name':'Pairwise-based',
+        #     'Description':'Enrichment result',
+        #     'Value': str(candidates)+str(np.sort(data)[::-1])
+        # },item['_id'])
+        
+        distinct_decent=np.sort(np.unique(data))[::-1]
+        top_list=list()
+        # number of elements return
+        count = 2 
+        for i in range(count):
+            decent_utility_index=np.argwhere(data==distinct_decent[i])
+            decent_utility_index=decent_utility_index.reshape(1,decent_utility_index.size)[0].tolist()
+            # print(decent_utility_index)
+            top_list+=decent_utility_index
+            if len(top_list)>=count:
+                break
+        top_candidates=candidates[top_list]
+        top_data=data[top_list]
+        properties=list()
+        for i in range(len(top_list)):
+            properties.append({
+                'Name':top_candidates[i],
+                'Description':'Similarity score',
+                'Value':top_data[i]
+            })
+        # utility_value=np.sort(data)[::-1]
+        # np.argwhere(a==max(a))
+        user_property={
+            'Name':'Pairwise-based classification',
+            'Description':'Object classification based on pairwise spatial relationship',
+            'Children': properties
+        }
+        update_user_property(object_list[j],user_property,item['_id'])
+        
     return match_matrix
 app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
@@ -594,22 +649,22 @@ def get_item_clear(item):
             for p_set in payload['UserProperty']:
                 if p_set['Name']=='Enrichment' and len(p_set['Children'])>0:
                     for p in p_set['Children']:
-                        if p['Name']=='Shape-based' or p['Name']=='Pair-based':
+                        if p['Name']=='Geometry-based' or p['Name']=='Pairwise-based':
                             p['Value']=''
         else:
             payload={
                 'UserProperty':[{
                     'Name':'Enrichment',
-                    'Description':'Enrichment',
+                    'Description':'Enrichment results',
                     'Children':[
                     {
-                        'Name':'Shape-based',
-                        'Description':'Shape-based Enrichment',
+                        'Name':'Geometry-based',
+                        'Description':'Enrichment result',
                         'Value':'',
                     },
                     {
-                        'Name':'Pair-based',
-                        'Description':'Pair-based Enrichment',
+                        'Name':'Pairwise-based',
+                        'Description':'Enrichment result',
                         'Value':'',
                     }],
                 }]
@@ -624,26 +679,20 @@ app.on_fetched_item_clear+=get_item_clear
 
 def update_user_property(guid,data,file_id):
     entity_data=getitem_internal('entity',**{"FileID":file_id,"Attribute": {"$elemMatch":{"Value": guid,"Name": "GlobalId"}}})[0]
-    
     if 'UserProperty' in entity_data and len(entity_data['UserProperty'])>0:
         payload={'UserProperty':entity_data['UserProperty']}
+        hasMe=False
         for p_set in payload['UserProperty']:
-            if p_set['Name']=='Enrichment' and len(p_set['Children'])>0:
-                hasMe=False
-                for p in p_set['Children']:
-                    if p['Name']==data['Name']:
-                        p['Value']=data['Value']
-                        hasMe=True
-                if not hasMe:
-                    p_set['Children'].append(data)
+            if p_set['Name']==data['Name']:
+                hasMe=True
+                break
+        if not hasMe:
+            payload['UserProperty'].append(data)
     else:
         payload={
-            'UserProperty':[{
-                'Name':'Enrichment',
-                'Description':'Enrichment',
-                'Children':[data],
-            }]
+            'UserProperty':[data]
         }
+    # print(payload)
     patch_internal('entity',payload,**{'_id': entity_data['_id']})
 
 # # only return documents that have property sets, 
