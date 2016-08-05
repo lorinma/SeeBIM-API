@@ -632,8 +632,8 @@ def get_item_modelPairFeature(item):
 app.on_fetched_item_modelPairFeature+=get_item_modelPairFeature
 
 def get_item_run(item):
-    fact_shape_norm_matrix=get_item_modelShapeFeatures(item)
     pair_match_matrix=get_item_modelPairFeature(item)
+    fact_shape_norm_matrix=get_item_modelShapeFeatures(item)
     # average? square root?
 app.on_fetched_item_run+=get_item_run
 
