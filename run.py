@@ -9,7 +9,7 @@ import schema
 from eve.methods.get import get_internal,getitem_internal
 # from eve.methods.delete import deleteitem_internal
 from eve.methods.post import post_internal
-# from eve.methods.patch import patch_internal
+from eve.methods.patch import patch_internal
 # from flask import abort
 # from bson.objectid import ObjectId
 
@@ -51,25 +51,50 @@ def get_trimble_token():
 
 def add_file(items):
     for item in items:
+        # download file
         file=IO()
         file_path=file.save_file(item['Url'])
-        ifc=IFC(file_path)
-        data=ifc.parse_geometry()
+        
+        # upload to trimble
         token=get_trimble_token()
         headers={"Authorization":"Bearer "+token}
         files = {'file': open(file_path, 'rb')}
         r = requests.post(trimble_url+'files?parentId='+trimble_folder_id,files=files,headers=headers)
-        file.remove_file(file_path)
         trimble_data=r.json()[0]
         file_id=trimble_data['versionId']
         item['TrimbleVersionID']=file_id
-        # item['ThumbnailUrl']=trimble_data['thumbnailUrl']
+        
+        # extract features from ifc file
+        ifc=IFC(file_path)
+        data=ifc.parse_geometry()
+        file.remove_file(file_path)
         bim=Model(data=data,model_id=file_id)
         features=bim.get_features()
-        # print(features[100])
+        
+        # check if model is parsed in trimble
+        r = requests.get(trimble_url+'files/'+file_id,headers=headers)
+        thumbnailUrl=r.json()['thumbnailUrl'][0]
+        item['ThumbnailUrl']=thumbnailUrl if "https://" in thumbnailUrl else ""
         post_internal('feature',features,skip_validation=True)
         
 app.on_insert_file+=add_file
+
+def get_files(data):
+    for item in data['_items']:
+        if "ThumbnailUrl" not in item or item['ThumbnailUrl']=="" or "https://" not in item['ThumbnailUrl']:
+            token=get_trimble_token()
+            file_id=item['TrimbleVersionID']
+            headers={"Authorization":"Bearer "+token}
+            r = requests.get(trimble_url+'files/'+file_id,headers=headers)
+            thumbnailUrl=r.json()['thumbnailUrl'][0]
+            if "https://" in thumbnailUrl:
+                item['ThumbnailUrl']=thumbnailUrl
+                payload={
+                    "ThumbnailUrl":thumbnailUrl
+                }
+                patch_internal('file',payload,**{'_id': item['_id']})
+            
+app.on_fetched_resource_file+=get_files
 
 if __name__ == '__main__':
     # app.run()
