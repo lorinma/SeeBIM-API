@@ -7,7 +7,9 @@ token_log_schema = {
 
 file_schema = {
     'UserID': {'type':'string'},
+    'Url': {'type':'string'},
     'TrimbleVersionID': {'type':'string'},
+    'ThumbnailUrl': {'type':'string'},
 }
 
 feature_schema = {
@@ -16,6 +18,8 @@ feature_schema = {
     'FeatureName': {'type':'string'},
     'FeatureDescription': {'type':'string'},
     'FeatureValue': {},
+    'GlobalId': {'type':'string'},
+    'FileID': {'type':'string'},
 }
 
 token_log_resource = {
