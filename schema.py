@@ -40,6 +40,10 @@ latest_token_resource = {
 file_resource = {
     'item_title': 'TrimbleFile',
     'schema': file_schema,
+    'extra_response_fields':[
+        'TrimbleVersionID',
+        'ThumbnailUrl',
+    ]
 }
 
 feature_resource = {

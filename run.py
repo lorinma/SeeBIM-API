@@ -46,7 +46,7 @@ def get_trimble_token():
     r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
     token=r.json()['token']
     data={"TrimbleToken":token}
-    post_internal('entity',data)
+    post_internal('log',data)
     return token
 
 def add_file(items):
@@ -74,25 +74,44 @@ def add_file(items):
         # check if model is parsed in trimble
         r = requests.get(trimble_url+'files/'+file_id,headers=headers)
         thumbnailUrl=r.json()['thumbnailUrl'][0]
-        item['ThumbnailUrl']=thumbnailUrl if "https://" in thumbnailUrl else ""
+        item['ThumbnailUrl']=process_thumbnail(thumbnailUrl)
         post_internal('feature',features,skip_validation=True)
+
+def process_thumbnail(url):
+    if "https://app" in url:
+        import uuid
+        token=get_trimble_token()
+        headers={"Authorization":"Bearer "+token}
+        trimble_thumb = requests.get(url,headers=headers)
+        filename=str(uuid.uuid4())+".jpg"
+        with open(filename, 'wb') as f:
+            f.write(trimble_thumb.content)
+        file = {"upload":open(filename, 'rb')}
+        # http://uploads.im/apidocs is a service for free hosting and sharing img
+        im_thumb = requests.post('http://uploads.im/api',files=file)
+        data=im_thumb.json()
+        return data['data']['thumb_url']
+    if "http://" in url:
+        return url
+    return ""
         
 app.on_insert_file+=add_file
 
 def get_files(data):
     for item in data['_items']:
-        if "ThumbnailUrl" not in item or item['ThumbnailUrl']=="" or "https://" not in item['ThumbnailUrl']:
+        if "http://sl" not in item['ThumbnailUrl']:
             token=get_trimble_token()
             file_id=item['TrimbleVersionID']
             headers={"Authorization":"Bearer "+token}
             r = requests.get(trimble_url+'files/'+file_id,headers=headers)
-            thumbnailUrl=r.json()['thumbnailUrl'][0]
-            if "https://" in thumbnailUrl:
-                item['ThumbnailUrl']=thumbnailUrl
-                payload={
-                    "ThumbnailUrl":thumbnailUrl
-                }
-                patch_internal('file',payload,**{'_id': item['_id']})
+            thumbnailUrl=process_thumbnail(r.json()['thumbnailUrl'][0])
+            if thumbnailUrl=="":
+                continue
+            item['ThumbnailUrl']=thumbnailUrl
+            payload={
+                "ThumbnailUrl":thumbnailUrl
+            }
+            patch_internal('file',payload,**{'_id': item['_id']})
             
 app.on_fetched_resource_file+=get_files
 

@@ -19,10 +19,10 @@ class IO:
     def load_json(self,file_name='data.json'):
         return json.loads(open(file_name).read())
         
-    def save_file(self,url):
+    def save_file(self,url,extension="ifc"):
         import requests
         r = requests.get(url)
-        filename=str(uuid.uuid4())+".ifc"
+        filename=str(uuid.uuid4())+"."+extension
         file_path=join(self.static_path,filename)
         with open(file_path, 'wb') as f:
             f.write(r.content)
