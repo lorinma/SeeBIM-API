@@ -39,5 +39,6 @@ DOMAIN= {
     'file': schema.file_resource,
     'feature': schema.feature_resource,
     'log': schema.token_log_resource,
-    'token': schema.latest_token_resource
+    'token': schema.latest_token_resource,
+    'fileRemove': schema.file_remove_resource
 }

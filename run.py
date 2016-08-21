@@ -115,6 +115,13 @@ def get_files(data):
             
 app.on_fetched_resource_file+=get_files
 
+def remove_files(item):
+    payload={
+        "UserID":'removed-by-' + item['UserID']
+    }
+    patch_internal('file',payload,**{'_id': item['_id']})
+
+app.on_fetched_item_fileRemove+=remove_files
 if __name__ == '__main__':
     # app.run()
     # particularly for cloud 9 use

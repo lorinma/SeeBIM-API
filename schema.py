@@ -50,3 +50,12 @@ feature_resource = {
     'item_title': 'ObjectFeature',
     'schema': feature_schema,
 }
+
+# change the userID
+file_remove_resource = {
+    'item_title': 'ChangeTrimbleFileOwner',
+    'schema': file_schema,
+    'datasource':{
+        'source':'file',
+    }
+}
