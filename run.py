@@ -74,11 +74,11 @@ def add_file(items):
         # check if model is parsed in trimble
         r = requests.get(trimble_url+'files/'+file_id,headers=headers)
         thumbnailUrl=r.json()['thumbnailUrl'][0]
-        item['ThumbnailUrl']=process_thumbnail(thumbnailUrl)
+        item['ThumbnailUrl']=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
         post_internal('feature',features,skip_validation=True)
 
 def process_thumbnail(url):
-    if "https://app" in url:
+    if not url=="":
         import uuid
         token=get_trimble_token()
         headers={"Authorization":"Bearer "+token}
@@ -92,20 +92,19 @@ def process_thumbnail(url):
         data=im_thumb.json()
         os.remove(filename)
         return data['data']['thumb_url']
-    if "http://" in url:
-        return url
     return ""
         
 app.on_insert_file+=add_file
 
 def get_files(data):
     for item in data['_items']:
-        if "http://sl" not in item['ThumbnailUrl']:
+        if item['ThumbnailUrl']=="":
             token=get_trimble_token()
             file_id=item['TrimbleVersionID']
             headers={"Authorization":"Bearer "+token}
             r = requests.get(trimble_url+'files/'+file_id,headers=headers)
-            thumbnailUrl=process_thumbnail(r.json()['thumbnailUrl'][0])
+            thumbnailUrl=r.json()['thumbnailUrl'][0]
+            thumbnailUrl=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
             if thumbnailUrl=="":
                 continue
             item['ThumbnailUrl']=thumbnailUrl
