@@ -90,6 +90,7 @@ def process_thumbnail(url):
         # http://uploads.im/apidocs is a service for free hosting and sharing img
         im_thumb = requests.post('http://uploads.im/api',files=file)
         data=im_thumb.json()
+        os.remove(filename)
         return data['data']['thumb_url']
     if "http://" in url:
         return url
