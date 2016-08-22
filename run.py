@@ -35,7 +35,9 @@ trimble_key=os.environ.get('TRIMBLE_KEY')
 trimble_folder_id=os.environ.get('TRIMBLE_FolderID')
 
 def get_trimble_token():
-    token=get_internal('token')[0]['_items'][0]["TrimbleToken"]
+    data=get_internal('token')
+    token=data[0]['_items'][0]["TrimbleToken"]
+    
     headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
     r = requests.get(trimble_url+'regions',headers=headers)
     if 'errorcode' not in r.json():
@@ -98,7 +100,6 @@ def process_thumbnail(url):
 app.on_insert_file+=add_file
 
 def get_files(data):
-    token=get_trimble_token()
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
             token=get_trimble_token()
@@ -121,9 +122,9 @@ def get_viewer_data(data):
     token=get_trimble_token()
     for item in data['_items']:
         item['token']=token
-        
     
 app.on_fetched_resource_viewer+=get_viewer_data
+
 def remove_files(item):
     payload={
         "UserID":'removed-by-' + item['UserID']
