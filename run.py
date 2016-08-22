@@ -63,6 +63,7 @@ def add_file(items):
         trimble_data=r.json()[0]
         file_id=trimble_data['versionId']
         item['TrimbleVersionID']=file_id
+        item['TrimbleProjectID']=trimble_data['projectId']
         
         # extract features from ifc file
         ifc=IFC(file_path)
@@ -97,6 +98,7 @@ def process_thumbnail(url):
 app.on_insert_file+=add_file
 
 def get_files(data):
+    token=get_trimble_token()
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
             token=get_trimble_token()
@@ -115,6 +117,13 @@ def get_files(data):
             
 app.on_fetched_resource_file+=get_files
 
+def get_viewer_data(data):
+    token=get_trimble_token()
+    for item in data['_items']:
+        item['token']=token
+        
+    
+app.on_fetched_resource_viewer+=get_viewer_data
 def remove_files(item):
     payload={
         "UserID":'removed-by-' + item['UserID']

@@ -40,5 +40,6 @@ DOMAIN= {
     'feature': schema.feature_resource,
     'log': schema.token_log_resource,
     'token': schema.latest_token_resource,
-    'fileRemove': schema.file_remove_resource
+    'fileRemove': schema.file_remove_resource,
+    'viewer': schema.viewer_resource
 }

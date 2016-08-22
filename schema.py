@@ -10,6 +10,7 @@ file_schema = {
     'Url': {'type':'string'},
     'TrimbleVersionID': {'type':'string'},
     'ThumbnailUrl': {'type':'string'},
+    'TrimbleProjectID': {'type':'string'},
 }
 
 feature_schema = {
@@ -54,6 +55,15 @@ feature_resource = {
 # change the userID
 file_remove_resource = {
     'item_title': 'ChangeTrimbleFileOwner',
+    'schema': file_schema,
+    'datasource':{
+        'source':'file',
+    }
+}
+
+# get viewer data
+viewer_resource = {
+    'item_title': 'ViewerData',
     'schema': file_schema,
     'datasource':{
         'source':'file',
