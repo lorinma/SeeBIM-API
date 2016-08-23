@@ -35,13 +35,14 @@ trimble_key=os.environ.get('TRIMBLE_KEY')
 trimble_folder_id=os.environ.get('TRIMBLE_FolderID')
 
 def get_trimble_token():
-    data=get_internal('token')
-    token=data[0]['_items'][0]["TrimbleToken"]
-    
-    headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
-    r = requests.get(trimble_url+'regions',headers=headers)
-    if 'errorcode' not in r.json():
-        return token
+    data=get_internal('token')[0]['_items']
+    # print(data)
+    if len(data)>0:
+        token=data[0]["TrimbleToken"]
+        headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
+        r = requests.get(trimble_url+'regions',headers=headers)
+        if 'errorcode' not in r.json():
+            return token    
     # if token expired get a new one
     para={'emailAddress':trimble_email, 'key':trimble_key}
     headers={"Content-Type":"application/json"}
@@ -73,12 +74,12 @@ def add_file(items):
         file.remove_file(file_path)
         bim=Model(data=data,model_id=file_id)
         features=bim.get_features()
-        
+        print(features[1])
         # check if model is parsed in trimble
         r = requests.get(trimble_url+'files/'+file_id,headers=headers)
         thumbnailUrl=r.json()['thumbnailUrl'][0]
         item['ThumbnailUrl']=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
-        post_internal('feature',features,skip_validation=True)
+        post_internal('feature',features)
 
 def process_thumbnail(url):
     if not url=="":
@@ -100,6 +101,7 @@ def process_thumbnail(url):
 app.on_insert_file+=add_file
 
 def get_files(data):
+    # token=get_trimble_token()
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
             token=get_trimble_token()
@@ -118,12 +120,10 @@ def get_files(data):
             
 app.on_fetched_resource_file+=get_files
 
-def get_viewer_data(data):
-    token=get_trimble_token()
-    for item in data['_items']:
-        item['token']=token
+def get_viewer_data(item):
+    item['token']=get_trimble_token()
     
-app.on_fetched_resource_viewer+=get_viewer_data
+app.on_fetched_item_viewer+=get_viewer_data
 
 def remove_files(item):
     payload={

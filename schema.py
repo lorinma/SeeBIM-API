@@ -30,7 +30,6 @@ token_log_resource = {
 
 latest_token_resource = {
     'item_title': 'LatestToken',
-    'schema': token_log_schema,
     'datasource':{
         'source':'log',
         'default_sort': [('_updated',-1)],
@@ -47,11 +46,6 @@ file_resource = {
     ]
 }
 
-feature_resource = {
-    'item_title': 'ObjectFeature',
-    'schema': feature_schema,
-}
-
 # change the userID
 file_remove_resource = {
     'item_title': 'ChangeTrimbleFileOwner',
@@ -64,8 +58,18 @@ file_remove_resource = {
 # get viewer data
 viewer_resource = {
     'item_title': 'ViewerData',
-    'schema': file_schema,
+    'schema': {
+        'TrimbleVersionID': {'type':'string'},
+        'TrimbleProjectID': {'type':'string'},
+        'token': {'type':'string'},
+    },
     'datasource':{
         'source':'file',
     }
+}
+
+feature_resource = {
+    'item_title': 'ObjectFeature',
+    'schema': feature_schema,
+    # 'pagination': False
 }
