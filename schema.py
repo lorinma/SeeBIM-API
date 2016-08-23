@@ -71,5 +71,5 @@ viewer_resource = {
 feature_resource = {
     'item_title': 'ObjectFeature',
     'schema': feature_schema,
-    # 'pagination': False
+    'pagination': False
 }
