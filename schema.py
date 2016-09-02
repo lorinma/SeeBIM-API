@@ -28,7 +28,7 @@ token_log_resource = {
     'schema': token_log_schema,
 }
 
-latest_token_resource = {
+token_resoure = {
     'item_title': 'LatestToken',
     'datasource':{
         'source':'log',
@@ -36,6 +36,7 @@ latest_token_resource = {
         'projection': {'TrimbleToken':1},
     }
 }
+
 
 file_resource = {
     'item_title': 'TrimbleFile',

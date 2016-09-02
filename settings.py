@@ -39,7 +39,7 @@ DOMAIN= {
     'file': schema.file_resource,
     'feature': schema.feature_resource,
     'log': schema.token_log_resource,
-    'token': schema.latest_token_resource,
+    'lastToken':schema.token_resoure,
     'fileRemove': schema.file_remove_resource,
     'viewer': schema.viewer_resource
 }

@@ -24,6 +24,9 @@ from util_io import IO
 from util_ifc import IFC
 from util_model import Model
 
+import jwt
+import datetime
+
 from eve import Eve
 app = Eve()
 
@@ -34,23 +37,28 @@ trimble_email=os.environ.get('TRIMBLE_EMAIL')
 trimble_key=os.environ.get('TRIMBLE_KEY')
 trimble_folder_id=os.environ.get('TRIMBLE_FolderID')
 
-def get_trimble_token():
-    data=get_internal('token')[0]['_items']
-    # print(data)
-    if len(data)>0:
-        token=data[0]["TrimbleToken"]
-        headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
-        r = requests.get(trimble_url+'regions',headers=headers)
-        if 'errorcode' not in r.json():
-            return token    
-    # if token expired get a new one
+def get_token(data):
+    items=data['_items']
+    if len(items)>0:
+        token = items[0]['TrimbleToken']
+        exp = jwt.decode(token,verify=False)['exp']
+        now=datetime.datetime.now().timestamp()
+        if now+120<exp:
+            data['_items']={
+                'token':token
+            }
+            return
     para={'emailAddress':trimble_email, 'key':trimble_key}
     headers={"Content-Type":"application/json"}
     r = requests.post(trimble_url+'auth',data=json.dumps(para),headers=headers)
     token=r.json()['token']
-    data={"TrimbleToken":token}
-    post_internal('log',data)
-    return token
+    payload={"TrimbleToken":token}
+    post_internal('log',payload)
+    data['_items']={
+        'token':token
+    }
+    
+app.on_fetched_resource_lastToken+=get_token
 
 def add_file(items):
     for item in items:
@@ -59,7 +67,8 @@ def add_file(items):
         file_path=file.save_file(item['Url'])
         
         # upload to trimble
-        token=get_trimble_token()
+        token=get_internal('lastToken')[0]['_items']['token']
+        # token=get_trimble_token()
         headers={"Authorization":"Bearer "+token}
         files = {'file': open(file_path, 'rb')}
         r = requests.post(trimble_url+'files?parentId='+trimble_folder_id,files=files,headers=headers)
@@ -74,7 +83,6 @@ def add_file(items):
         file.remove_file(file_path)
         bim=Model(data=data,model_id=file_id)
         features=bim.get_features()
-        print(features[1])
         # check if model is parsed in trimble
         r = requests.get(trimble_url+'files/'+file_id,headers=headers)
         thumbnailUrl=r.json()['thumbnailUrl'][0]
@@ -84,7 +92,8 @@ def add_file(items):
 def process_thumbnail(url):
     if not url=="":
         import uuid
-        token=get_trimble_token()
+        token=get_internal('lastToken')[0]['_items']['token']
+        # token=get_trimble_token()
         headers={"Authorization":"Bearer "+token}
         trimble_thumb = requests.get(url,headers=headers)
         filename=str(uuid.uuid4())+".jpg"
@@ -102,10 +111,9 @@ def process_thumbnail(url):
 app.on_insert_file+=add_file
 
 def get_files(data):
-    # token=get_trimble_token()
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
-            token=get_trimble_token()
+            token=get_internal('lastToken')[0]['_items']['token']
             file_id=item['TrimbleVersionID']
             headers={"Authorization":"Bearer "+token}
             r = requests.get(trimble_url+'files/'+file_id,headers=headers)
@@ -122,7 +130,8 @@ def get_files(data):
 app.on_fetched_resource_file+=get_files
 
 def get_viewer_data(item):
-    item['token']=get_trimble_token()
+    item['token']=get_internal('lastToken')[0]['_items']['token']
+    # item['token']=get_trimble_token()
     
 app.on_fetched_item_viewer+=get_viewer_data
 
@@ -133,6 +142,11 @@ def remove_files(item):
     patch_internal('file',payload,**{'_id': item['_id']})
 
 app.on_fetched_item_fileRemove+=remove_files
+
+def reverse_pairwise(data):
+    pass
+
+app.on_fetched_resource_feature+=reverse_pairwise
 if __name__ == '__main__':
     # app.run()
     # particularly for cloud 9 use
