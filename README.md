@@ -18,7 +18,7 @@ conda install python-fcl -y;
 
 ### nstall eve
 sudo pip install git+git://github.com/nicolaiarocci/eve.git
-sudo pip install python-dotenv==0.5.0
+sudo pip install python-dotenv==0.5.0 pyjwt
 
 ### setup credentials in env
 touch .env

@@ -27,6 +27,7 @@ class IFC:
     def parse_geometry(self):
         elements = self.file.by_type('IfcProduct')
         data=list()
+        entities=list()
         for entity_element in elements:
             if entity_element.Representation is None:
                 continue
@@ -52,4 +53,8 @@ class IFC:
                 # "FileID":file_id,
                 "GlobalId":entity_element.GlobalId
             })
-        return data
+            entities.append({
+                "IFCType":entity_element.is_a(),
+                "GlobalId":entity_element.GlobalId
+            })
+        return (entities,data)

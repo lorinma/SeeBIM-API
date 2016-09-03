@@ -1,6 +1,9 @@
 # Author: Dr. Ling Ma
 # https://il.linkedin.com/in/cvlingma
 
+# use eve + mongo instead of hosing on Google firebase, because the latter only supports pure nodejs app
+# however the api needs ifcopenshell python anyway, in addition, eve is a advanced REST api framework
+
 import os
 # from eve.io.mongo import Validator
 import requests
@@ -57,15 +60,15 @@ def get_token(data):
     data['_items']={
         'token':token
     }
-    
 app.on_fetched_resource_lastToken+=get_token
 
+###########################################
+# add a file and process model thumnail, which is uploaded to http://uploads.im
 def add_file(items):
     for item in items:
         # download file
         file=IO()
         file_path=file.save_file(item['Url'])
-        
         # upload to trimble
         token=get_internal('lastToken')[0]['_items']['token']
         # token=get_trimble_token()
@@ -73,22 +76,21 @@ def add_file(items):
         files = {'file': open(file_path, 'rb')}
         r = requests.post(trimble_url+'files?parentId='+trimble_folder_id,files=files,headers=headers)
         trimble_data=r.json()[0]
-        file_id=trimble_data['versionId']
-        item['TrimbleVersionID']=file_id
+        TrimbleVersionID=trimble_data['versionId']
+        item['TrimbleVersionID']=TrimbleVersionID
         item['TrimbleProjectID']=trimble_data['projectId']
-        
         # extract features from ifc file
         ifc=IFC(file_path)
-        data=ifc.parse_geometry()
+        entities, data=ifc.parse_geometry()
         file.remove_file(file_path)
-        bim=Model(data=data,model_id=file_id)
+        bim=Model(data=data,model_id=TrimbleVersionID)
         features=bim.get_features()
         # check if model is parsed in trimble
-        r = requests.get(trimble_url+'files/'+file_id,headers=headers)
+        r = requests.get(trimble_url+'files/'+TrimbleVersionID,headers=headers)
         thumbnailUrl=r.json()['thumbnailUrl'][0]
         item['ThumbnailUrl']=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
+        item['Entities']=entities
         post_internal('feature',features)
-
 def process_thumbnail(url):
     if not url=="":
         import uuid
@@ -103,20 +105,17 @@ def process_thumbnail(url):
         # http://uploads.im/apidocs is a service for free hosting and sharing img
         im_thumb = requests.post('http://uploads.im/api',files=file)
         data=im_thumb.json()
-        print(data)
         os.remove(filename)
         return data['data']['thumb_url']
     return ""
-        
 app.on_insert_file+=add_file
-
 def get_files(data):
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
             token=get_internal('lastToken')[0]['_items']['token']
-            file_id=item['TrimbleVersionID']
+            TrimbleVersionID=item['TrimbleVersionID']
             headers={"Authorization":"Bearer "+token}
-            r = requests.get(trimble_url+'files/'+file_id,headers=headers)
+            r = requests.get(trimble_url+'files/'+TrimbleVersionID,headers=headers)
             thumbnailUrl=r.json()['thumbnailUrl'][0]
             thumbnailUrl=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
             if thumbnailUrl=="":
@@ -126,27 +125,44 @@ def get_files(data):
                 "ThumbnailUrl":thumbnailUrl
             }
             patch_internal('file',payload,**{'_id': item['_id']})
-            
-app.on_fetched_resource_file+=get_files
+app.on_fetched_resource_fileList+=get_files
 
-def get_viewer_data(item):
-    item['token']=get_internal('lastToken')[0]['_items']['token']
-    # item['token']=get_trimble_token()
-    
-app.on_fetched_item_viewer+=get_viewer_data
-
+###########################################
+# 'remove a model' actually only changes the owner/user of the model, so that the model is kept in DB
 def remove_files(item):
     payload={
         "UserID":'removed-by-' + item['UserID']
     }
     patch_internal('file',payload,**{'_id': item['_id']})
-
 app.on_fetched_item_fileRemove+=remove_files
 
-def reverse_pairwise(data):
-    pass
+###########################################
+# in addition to TrimbleVersionID and TrimbleProjectID, the viewer also requires a valid token
+def get_viewer_data(item):
+    item['token']=get_internal('lastToken')[0]['_items']['token']
+app.on_fetched_item_viewer+=get_viewer_data
 
-app.on_fetched_resource_feature+=reverse_pairwise
+###########################################
+# get all the features, the pairwise feature's value is reversed, this helps front end viewer to easily hide these objects 
+def get_feature_view(data):
+    items=data['_items']
+    if len(items)==0:
+        return
+    TrimbleVersionID=items[0]['TrimbleVersionID']
+    entities=getitem_internal('file',**{'TrimbleVersionID': TrimbleVersionID})[0]['Entities']
+    all=list()
+    for entity in entities:
+        all.append(entity['GlobalId'])
+    for item in items:
+        hide=all[:]
+        if item['FeatureType']=='Pairwise' and item['FeatureProvider']=='System':
+            show=item['FeatureValue']
+            show.append(item['GlobalId'])
+            for show_obj in show:
+                hide.remove(show_obj)
+            item['FeatureValue']=hide
+app.on_fetched_resource_featureVisual+=get_feature_view
+
 if __name__ == '__main__':
     # app.run()
     # particularly for cloud 9 use

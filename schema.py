@@ -7,10 +7,21 @@ token_log_schema = {
 
 file_schema = {
     'UserID': {'type':'string'},
+    # post the url to this api for later downloading and processing model
     'Url': {'type':'string'},
     'TrimbleVersionID': {'type':'string'},
     'ThumbnailUrl': {'type':'string'},
     'TrimbleProjectID': {'type':'string'},
+    'Entities':{
+        'type': 'list',
+        'schema': {
+            'type':'dict',
+            'schema':{
+                'GlobalId': {'type':'string'},
+                'IFCType': {'type':'string'},
+            }
+        }
+    }
 }
 
 feature_schema = {
@@ -20,7 +31,7 @@ feature_schema = {
     'FeatureDescription': {'type':'string'},
     'FeatureValue': {},
     'GlobalId': {'type':'string'},
-    'FileID': {'type':'string'},
+    'TrimbleVersionID': {'type':'string'},
 }
 
 token_log_resource = {
@@ -37,14 +48,39 @@ token_resoure = {
     }
 }
 
-
 file_resource = {
     'item_title': 'TrimbleFile',
     'schema': file_schema,
     'extra_response_fields':[
-        'TrimbleVersionID',
         'ThumbnailUrl',
     ]
+}
+
+file_list_resource = {
+    'item_title': 'TrimbleFile',
+    'schema': file_schema,
+    'datasource':{
+        'source':'file',
+        'projection': {
+            'UserID':1,
+            'ThumbnailUrl':1,
+            'TrimbleVersionID':1,
+        },
+    }
+}
+
+# get viewer data
+viewer_resource = {
+    'item_title': 'TrimbleFile',
+    'schema': file_schema,
+    'datasource':{
+        'source':'file',
+        'projection': {
+            'token':1,
+            'TrimbleVersionID':1,
+            'TrimbleProjectID':1
+        },
+    }
 }
 
 # change the userID
@@ -56,21 +92,17 @@ file_remove_resource = {
     }
 }
 
-# get viewer data
-viewer_resource = {
-    'item_title': 'ViewerData',
-    'schema': {
-        'TrimbleVersionID': {'type':'string'},
-        'TrimbleProjectID': {'type':'string'},
-        'token': {'type':'string'},
-    },
-    'datasource':{
-        'source':'file',
-    }
-}
-
 feature_resource = {
     'item_title': 'ObjectFeature',
     'schema': feature_schema,
-    'pagination': False
+}
+
+pairwise_reversed_feature_resource = {
+    'item_title': 'ObjectFeature',
+    'schema': feature_schema,
+    'datasource':{
+        'source':'feature',
+        'pagination': False
+    }
+    
 }

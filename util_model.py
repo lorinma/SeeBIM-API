@@ -36,7 +36,7 @@ class Model:
             with_guid_data=list()
             for no_guid_item in no_guid_data:
                 no_guid_item['GlobalId']=self.guids[inx]
-                no_guid_item['FileID']=self.model_id
+                no_guid_item['TrimbleVersionID']=self.model_id
                 no_guid_item['FeatureProvider']="System"
                 with_guid_data.append(no_guid_item)
             inx+=1
@@ -91,7 +91,7 @@ class Model:
                             'FeatureProvider':'System',
                             'FeatureDescription':'',
                             'FeatureValue':guids[para_value].tolist(),
-                            'FileID':self.model_id
+                            'TrimbleVersionID':self.model_id
                         })
         for perpendicular in perpendicular_pairs:
             obj1=parallel_inx[perpendicular[0]]
@@ -104,7 +104,7 @@ class Model:
                         'FeatureProvider':'System',
                         'FeatureDescription':'',
                         'FeatureValue':guids[obj2].tolist(),
-                        'FileID':self.model_id
+                        'TrimbleVersionID':self.model_id
                     })
             for i in obj2:
                 data.append({
@@ -114,7 +114,7 @@ class Model:
                         'FeatureProvider':'System',
                         'FeatureDescription':'',
                         'FeatureValue':guids[obj1].tolist(),
-                        'FileID':self.model_id
+                        'TrimbleVersionID':self.model_id
                     })
                     
         contact_dict=dict()
@@ -135,7 +135,7 @@ class Model:
                     'FeatureProvider':'System',
                     'FeatureDescription':'',
                     'FeatureValue':guids[contact_dict[key]].tolist(),
-                    'FileID':self.model_id
+                    'TrimbleVersionID':self.model_id
                 })
         return data
         
