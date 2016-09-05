@@ -39,6 +39,7 @@ DOMAIN= {
     'file': schema.file_resource,
     'fileList':schema.file_list_resource,
     'viewer': schema.viewer_resource,
+    'entity': schema.entity_resource,
     'feature': schema.feature_resource,
     'featureVisual': schema.pairwise_reversed_feature_resource,
     'log': schema.token_log_resource,

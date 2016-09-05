@@ -15,47 +15,39 @@ file_schema = {
     'Entities':{
         'type': 'list',
         'schema': {
-            'type':'dict',
-            'schema':{
-                'GlobalId': {'type':'string'},
-                'IFCType': {'type':'string'},
-                'Geometry': {
-                    'type': 'dict',
-                    'schema': {
-                        'Unit':{'type':'string'},
-                        'Faces': { 
-                            'type': 'list',
-                            'schema': {
-                                'type':'list',
-                                'schema':{
-                                    'type': 'number'
-                                }
-                            }
-                        },
-                        'Normals': { 
-                            'type': 'list',
-                            'schema': {
-                                'type':'list',
-                                'schema':{
-                                    'type': 'number'
-                                }
-                            }
-                        },
-                        'Vertices': { 
-                            'type': 'list',
-                            'schema': {
-                                'type':'list',
-                                'schema':{
-                                    'type': 'number'
-                                }
-                            }
-                        },
-                        'OCEBrep': {'type': 'string'}
-                    }
-                },
-            }
+            'type':'string',
         }
     }
+}
+
+entity_schema = {
+    'GlobalId': {'type':'string'},
+    'IFCType': {'type':'string'},
+    'Geometry': {
+        'type': 'dict',
+        'schema': {
+            'Unit':{'type':'string'},
+            'Faces': { 
+                'type': 'list',
+                'schema': {
+                    'type':'list',
+                    'schema':{
+                        'type': 'integer'
+                    }
+                }
+            },
+            'Vertices': { 
+                'type': 'list',
+                'schema': {
+                    'type':'list',
+                    'schema':{
+                        'type': 'number'
+                    }
+                }
+            },
+            # 'OCEBrep': {'type': 'string'}
+        }
+    },
 }
 
 feature_schema = {
@@ -117,6 +109,10 @@ viewer_resource = {
     }
 }
 
+entity_resource = {
+    'item_title': 'Entity',
+    'schema': entity_schema,
+}
 # change the userID
 file_remove_resource = {
     'item_title': 'ChangeTrimbleFileOwner',

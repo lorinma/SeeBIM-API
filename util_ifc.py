@@ -28,6 +28,7 @@ class IFC:
         elements = self.file.by_type('IfcProduct')
         data=list()
         entities=list()
+        entityList=list()
         for entity_element in elements:
             if entity_element.Representation is None:
                 continue
@@ -42,12 +43,12 @@ class IFC:
             v_array=np.array(v).reshape(int(len(v)/3),3)*1000
             f=geometry.faces
             f_array=np.array(f).reshape(int(len(f)/3),3)
-            n=geometry.normals
-            n_array=np.array(n).reshape(int(len(n)/3),3)
+            # n=geometry.normals
+            # n_array=np.array(n).reshape(int(len(n)/3),3)
             element=dict()
             element["Vertices"]=v_array.tolist()
             element["Faces"]=f_array.tolist()
-            element["Normals"]=n_array.tolist()
+            # element["Normals"]=n_array.tolist()
             element["Unit"]="mm"
             data.append({
                 "Geometry":element,
@@ -66,10 +67,11 @@ class IFC:
                 "GlobalId":entity_element.GlobalId,
                 "Geometry":{
                     "Vertices":v_array.tolist(),
-                    "Faces":v_array.tolist(),
-                    "Normals":v_array.tolist(),
+                    "Faces":f_array.tolist(),
+                    # "Normals":n_array.tolist(),
                     "Unit":"mm",
-                    "OCEBrep":brep
+                    # "OCEBrep":brep
                 }
             })
-        return (entities,data)
+            entityList.append(entity_element.GlobalId)
+        return (entityList,entities,data)

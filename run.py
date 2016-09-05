@@ -65,7 +65,7 @@ def get_token(data):
 app.on_fetched_resource_lastToken+=get_token
 
 ###########################################
-# add a file and process model thumnail, which is uploaded to http://uploads.im
+# encode the model thumnail image using Base64
 def add_file(items):
     for item in items:
         # download file
@@ -83,14 +83,18 @@ def add_file(items):
         item['TrimbleProjectID']=trimble_data['projectId']
         # extract features from ifc file
         ifc=IFC(file_path)
-        entities, data=ifc.parse_geometry()
+        entityList, entities, data=ifc.parse_geometry()
         file.remove_file(file_path)
         bim=Model(data=data,model_id=TrimbleVersionID)
         features=bim.get_features()
         
         item['ThumbnailUrl']=process_thumbnail(TrimbleVersionID,headers)
-        item['Entities']=entities
+        item['Entities']=entityList
+        for entity in entities:
+            entity['TrimbleVersionID']=TrimbleVersionID
+        post_internal('entity',entities,skip_validation=True)
         post_internal('feature',features)
+        
 def check_trimble_file_status(file_id,headers):
     r = requests.get(trimble_url+'files/'+file_id+'/status',headers=headers)
     return r.json()['status']==100
@@ -141,10 +145,7 @@ def get_feature_view(data):
     if len(items)==0:
         return
     TrimbleVersionID=items[0]['TrimbleVersionID']
-    entities=getitem_internal('file',**{'TrimbleVersionID': TrimbleVersionID})[0]['Entities']
-    all=list()
-    for entity in entities:
-        all.append(entity['GlobalId'])
+    all=getitem_internal('file',**{'TrimbleVersionID': TrimbleVersionID})[0]['Entities']
     for item in items:
         hide=all[:]
         if item['FeatureType']=='Pairwise' and item['FeatureProvider']=='System':
@@ -154,6 +155,16 @@ def get_feature_view(data):
                 hide.remove(show_obj)
             item['FeatureValue']=hide
 app.on_fetched_resource_featureVisual+=get_feature_view
+
+def get_entity_list(data):
+    items=data['_items']
+    entity_list=list()
+    for item in items:
+        entity_list.append(item['GlobalId'])
+    data['_items']={
+        'EntityList':entity_list
+        }
+app.on_fetched_resource_entityList+=get_entity_list
 
 if __name__ == '__main__':
     # app.run()
