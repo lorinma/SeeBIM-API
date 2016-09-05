@@ -19,6 +19,40 @@ file_schema = {
             'schema':{
                 'GlobalId': {'type':'string'},
                 'IFCType': {'type':'string'},
+                'Geometry': {
+                    'type': 'dict',
+                    'schema': {
+                        'Unit':{'type':'string'},
+                        'Faces': { 
+                            'type': 'list',
+                            'schema': {
+                                'type':'list',
+                                'schema':{
+                                    'type': 'number'
+                                }
+                            }
+                        },
+                        'Normals': { 
+                            'type': 'list',
+                            'schema': {
+                                'type':'list',
+                                'schema':{
+                                    'type': 'number'
+                                }
+                            }
+                        },
+                        'Vertices': { 
+                            'type': 'list',
+                            'schema': {
+                                'type':'list',
+                                'schema':{
+                                    'type': 'number'
+                                }
+                            }
+                        },
+                        'OCEBrep': {'type': 'string'}
+                    }
+                },
             }
         }
     }

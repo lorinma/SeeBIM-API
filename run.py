@@ -30,6 +30,8 @@ from util_model import Model
 import jwt
 import datetime
 
+import base64
+
 from eve import Eve
 app = Eve()
 
@@ -85,44 +87,34 @@ def add_file(items):
         file.remove_file(file_path)
         bim=Model(data=data,model_id=TrimbleVersionID)
         features=bim.get_features()
-        # check if model is parsed in trimble
-        r = requests.get(trimble_url+'files/'+TrimbleVersionID,headers=headers)
-        thumbnailUrl=r.json()['thumbnailUrl'][0]
-        item['ThumbnailUrl']=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
+        
+        item['ThumbnailUrl']=process_thumbnail(TrimbleVersionID,headers)
         item['Entities']=entities
         post_internal('feature',features)
-def process_thumbnail(url):
-    if not url=="":
-        import uuid
-        token=get_internal('lastToken')[0]['_items']['token']
-        # token=get_trimble_token()
-        headers={"Authorization":"Bearer "+token}
-        trimble_thumb = requests.get(url,headers=headers)
-        filename=str(uuid.uuid4())+".jpg"
-        with open(filename, 'wb') as f:
-            f.write(trimble_thumb.content)
-        file = {"upload":open(filename, 'rb')}
-        # http://uploads.im/apidocs is a service for free hosting and sharing img
-        im_thumb = requests.post('http://uploads.im/api',files=file)
-        data=im_thumb.json()
-        os.remove(filename)
-        return data['data']['thumb_url']
-    return ""
+def check_trimble_file_status(file_id,headers):
+    r = requests.get(trimble_url+'files/'+file_id+'/status',headers=headers)
+    return r.json()['status']==100
+def process_thumbnail(TrimbleVersionID,headers):
+    if not check_trimble_file_status(TrimbleVersionID,headers):
+        return ""
+    else:
+        r = requests.get(trimble_url+'files/'+TrimbleVersionID,headers=headers)
+        thumbnailUrl=r.json()['thumbnailUrl'][0]
+        trimble_thumb = requests.get(thumbnailUrl,headers=headers)
+        return 'data:image/png;base64,'+base64.b64encode(trimble_thumb.content).decode("utf-8")
 app.on_insert_file+=add_file
+
 def get_files(data):
     for item in data['_items']:
         if item['ThumbnailUrl']=="":
             token=get_internal('lastToken')[0]['_items']['token']
-            TrimbleVersionID=item['TrimbleVersionID']
             headers={"Authorization":"Bearer "+token}
-            r = requests.get(trimble_url+'files/'+TrimbleVersionID,headers=headers)
-            thumbnailUrl=r.json()['thumbnailUrl'][0]
-            thumbnailUrl=process_thumbnail(thumbnailUrl) if "http" in thumbnailUrl else ""
-            if thumbnailUrl=="":
+            img_data=process_thumbnail(item['TrimbleVersionID'],headers)
+            if img_data=="":
                 continue
-            item['ThumbnailUrl']=thumbnailUrl
+            item['ThumbnailUrl']=img_data
             payload={
-                "ThumbnailUrl":thumbnailUrl
+                "ThumbnailUrl":img_data
             }
             patch_internal('file',payload,**{'_id': item['_id']})
 app.on_fetched_resource_fileList+=get_files

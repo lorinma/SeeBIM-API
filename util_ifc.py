@@ -32,6 +32,7 @@ class IFC:
             if entity_element.Representation is None:
                 continue
             try:
+                self.settings.set(self.settings.USE_BREP_DATA, False)
                 shape = ifcopenshell.geom.create_shape(self.settings, entity_element)
             except:
                 continue
@@ -53,8 +54,22 @@ class IFC:
                 # "FileID":file_id,
                 "GlobalId":entity_element.GlobalId
             })
+            try:
+                self.settings.set(self.settings.USE_BREP_DATA, True)
+                shape = ifcopenshell.geom.create_shape(self.settings, entity_element)
+                geometry = shape.geometry
+                brep = geometry.brep_data
+            except:
+                brep = ""
             entities.append({
                 "IFCType":entity_element.is_a(),
-                "GlobalId":entity_element.GlobalId
+                "GlobalId":entity_element.GlobalId,
+                "Geometry":{
+                    "Vertices":v_array.tolist(),
+                    "Faces":v_array.tolist(),
+                    "Normals":v_array.tolist(),
+                    "Unit":"mm",
+                    "OCEBrep":brep
+                }
             })
         return (entities,data)
