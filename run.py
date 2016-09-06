@@ -40,7 +40,6 @@ app = Eve()
 trimble_url=os.environ.get('TRIMBLE_API_URL')
 trimble_email=os.environ.get('TRIMBLE_EMAIL')
 trimble_key=os.environ.get('TRIMBLE_KEY')
-trimble_folder_id=os.environ.get('TRIMBLE_FolderID')
 
 def get_token(data):
     items=data['_items']
@@ -91,6 +90,8 @@ app.on_fetched_item_projectRemove+=remove_project
 ###########################################
 # encode the model thumnail image using Base64
 def add_file(items):
+    project_info=getitem_internal('project',**{'_id': items[0]['ProjectID']})[0]
+    trimble_folder_id=project_info['TrimbleFolderID']
     for item in items:
         # download file
         file=IO()
@@ -103,7 +104,6 @@ def add_file(items):
         trimble_data=r.json()[0]
         TrimbleVersionID=trimble_data['versionId']
         item['TrimbleVersionID']=TrimbleVersionID
-        item['TrimbleProjectID']=trimble_data['projectId']
         # extract features from ifc file
         ifc=IFC(file_path)
         entityList, entities, data=ifc.parse_geometry()
@@ -117,7 +117,6 @@ def add_file(items):
             entity['TrimbleVersionID']=TrimbleVersionID
         post_internal('entity',entities,skip_validation=True)
         post_internal('feature',features)
-        
 def check_trimble_file_status(file_id,headers):
     r = requests.get(trimble_url+'files/'+file_id+'/status',headers=headers)
     return r.json()['status']==100
@@ -132,7 +131,10 @@ def process_thumbnail(TrimbleVersionID,headers):
 app.on_insert_file+=add_file
 
 def get_files(data):
-    for item in data['_items']:
+    items=data['_items']
+    if len(items)==0:
+        return
+    for item in items:
         if item['ThumbnailUrl']=="":
             token=get_internal('lastToken')[0]['_items']['token']
             headers={"Authorization":"Bearer "+token}
@@ -147,17 +149,19 @@ def get_files(data):
 app.on_fetched_resource_fileList+=get_files
 
 ###########################################
-# 'remove a model' actually only changes the owner/user of the model, so that the model is kept in DB
-def remove_files(item):
+# 'remove a model' actually only changes the url of the model, so that the model is kept in DB
+def remove_file(item):
     payload={
-        "UserID":'removed-by-' + item['UserID']
+        "Url":'removed'
     }
     patch_internal('file',payload,**{'_id': item['_id']})
-app.on_fetched_item_fileRemove+=remove_files
+app.on_fetched_item_fileRemove+=remove_file
 
 ###########################################
 # in addition to TrimbleVersionID and TrimbleProjectID, the viewer also requires a valid token
 def get_viewer_data(item):
+    project_info=getitem_internal('project',**{'_id': item['ProjectID']})[0]
+    item['TrimbleProjectID']=project_info['TrimbleProjectID']
     item['token']=get_internal('lastToken')[0]['_items']['token']
 app.on_fetched_item_viewer+=get_viewer_data
 

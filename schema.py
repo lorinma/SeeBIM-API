@@ -14,12 +14,18 @@ project_schema ={
 }
 
 file_schema = {
-    'UserID': {'type':'string'},
+    'ProjectID': {
+        'type': 'objectid',
+        'data_relation': {
+            'resource': 'project',
+            'field': '_id',
+            'embeddable': True
+        }
+    },
     # post the url to this api for later downloading and processing model
     'Url': {'type':'string'},
     'TrimbleVersionID': {'type':'string'},
     'ThumbnailUrl': {'type':'string'},
-    'TrimbleProjectID': {'type':'string'},
     'Entities':{
         'type': 'list',
         'schema': {
@@ -113,7 +119,7 @@ file_list_resource = {
     'datasource':{
         'source':'file',
         'projection': {
-            'UserID':1,
+            'ProjectID':1,
             'ThumbnailUrl':1,
             'TrimbleVersionID':1,
         },
@@ -127,7 +133,7 @@ viewer_resource = {
     'datasource':{
         'source':'file',
         'projection': {
-            'token':1,
+            'ProjectID':1,
             'TrimbleVersionID':1,
             'TrimbleProjectID':1
         },
