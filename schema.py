@@ -5,6 +5,14 @@ token_log_schema = {
     'TrimbleToken': {'type':'string'},
 }
 
+project_schema ={
+    'UserID': {'type':'string'},
+    'TrimbleProjectID': {'type':'string'},
+    'TrimbleFolderID': {'type':'string'},
+    'Name': {'type':'string'},
+    'Description': {'type':'string'},
+}
+
 file_schema = {
     'UserID': {'type':'string'},
     # post the url to this api for later downloading and processing model
@@ -71,6 +79,23 @@ token_resoure = {
         'source':'log',
         'default_sort': [('_updated',-1)],
         'projection': {'TrimbleToken':1},
+    }
+}
+
+project_resource = {
+    'item_title': 'Project',
+    'schema': project_schema,
+    'extra_response_fields':[
+        'Name',
+        'Description',
+    ]
+}
+# change the userID
+project_remove_resource = {
+    'item_title': 'ChangeProjectOwner',
+    'schema': project_schema,
+    'datasource':{
+        'source':'project',
     }
 }
 

@@ -64,6 +64,30 @@ def get_token(data):
     }
 app.on_fetched_resource_lastToken+=get_token
 
+def add_project(items):
+    for item in items:
+        token=get_internal('lastToken')[0]['_items']['token']
+        headers={"Content-Type":"application/json","Authorization":"Bearer "+token}
+        payload={
+            'name':item['Name'],
+            'description':item['Description'],
+        }
+        r = requests.post(trimble_url+'projects',data=json.dumps(payload),headers=headers)
+        trimble_data=r.json()
+        TrimbleFolderID=trimble_data['rootId']
+        TrimbleProjectID=trimble_data['id']
+        item['TrimbleFolderID']=TrimbleFolderID
+        item['TrimbleProjectID']=TrimbleProjectID
+app.on_insert_project+=add_project
+###########################################
+# 'remove a project' actually only changes the owner/user of the project, so that the project is kept in DB
+def remove_project(item):
+    payload={
+        "UserID":'removed-by-' + item['UserID']
+    }
+    patch_internal('project',payload,**{'_id': item['_id']})
+app.on_fetched_item_projectRemove+=remove_project
+
 ###########################################
 # encode the model thumnail image using Base64
 def add_file(items):
@@ -73,7 +97,6 @@ def add_file(items):
         file_path=file.save_file(item['Url'])
         # upload to trimble
         token=get_internal('lastToken')[0]['_items']['token']
-        # token=get_trimble_token()
         headers={"Authorization":"Bearer "+token}
         files = {'file': open(file_path, 'rb')}
         r = requests.post(trimble_url+'files?parentId='+trimble_folder_id,files=files,headers=headers)

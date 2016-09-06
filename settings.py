@@ -36,6 +36,8 @@ X_HEADERS=['Content-Type','IF-Match']
 # PAGINATION_DEFAULT=500
                
 DOMAIN= {
+    'project': schema.project_resource,
+    'projectRemove': schema.project_remove_resource,
     'file': schema.file_resource,
     'fileList':schema.file_list_resource,
     'viewer': schema.viewer_resource,
