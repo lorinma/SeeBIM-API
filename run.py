@@ -115,7 +115,7 @@ def add_file(items):
         item['Entities']=entityList
         for entity in entities:
             entity['TrimbleVersionID']=TrimbleVersionID
-        post_internal('entity',entities,skip_validation=True)
+        post_internal('entity',entities)
         post_internal('feature',features)
 def check_trimble_file_status(file_id,headers):
     r = requests.get(trimble_url+'files/'+file_id+'/status',headers=headers)

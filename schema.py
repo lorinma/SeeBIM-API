@@ -35,6 +35,7 @@ file_schema = {
 }
 
 entity_schema = {
+    'TrimbleVersionID': {'type':'string'},
     'GlobalId': {'type':'string'},
     'IFCType': {'type':'string'},
     'Geometry': {
